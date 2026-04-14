@@ -43,6 +43,29 @@ if customers.empty:
     st.error("Keine Kunden gefunden.")
     st.stop()
 
+customer_count = len(customers)
+alert_count = len(alerts) if not alerts.empty else 0
+high_alert_count = len(alerts[alerts["alert_priority"] == "high"]) if not alerts.empty else 0
+price_move_count = len(prices[prices["pct_change"].abs() >= 3]) if not prices.empty else 0
+
+st.subheader("Überblick")
+
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.metric("Kunden im Portfolio", customer_count)
+
+with col2:
+    st.metric("Offene Alerts", alert_count)
+
+with col3:
+    st.metric("High Alerts", high_alert_count)
+
+with col4:
+    st.metric("Kursbewegung > 3%", price_move_count)
+
+st.divider()
+
 if alerts.empty:
     st.warning("Keine Alerts gefunden.")
 
