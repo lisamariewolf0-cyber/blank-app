@@ -88,13 +88,13 @@ with left_col: st.subheader ("Alerts des Tages")
 
     if alerts.empty:
         st.warning("Keine Alerts gefunden.")
-
-    else: alerts_view = alerts.merge( 
-        customers, 
-        left_on="customer_id", 
-        right_on="id", 
-        how="left" 
-    )
+    else: 
+        alerts_view = alerts.merge( 
+            customers, 
+            left_on="customer_id", 
+               right_on="id", 
+            how="left" 
+        )
 
     if selected_sector != "Alle":
         alerts_view = alerts_view[alerts_view["sector"] == selected_sector]
