@@ -221,21 +221,21 @@ with right_col:
 
     status_col1, status_col2 = st.columns(2)
 
-   with status_col1:
-    if not detail_alerts.empty:
-        latest_alert = detail_alerts.sort_values("alert_date").iloc[-1]
+    with status_col1:
+        if not detail_alerts.empty:
+            latest_alert = detail_alerts.sort_values("alert_date").iloc[-1]
 
-        st.markdown("**Alert-Priorität**")
-        st.write(latest_alert["alert_priority"])
+            st.markdown("**Alert-Priorität**")
+            st.write(latest_alert["alert_priority"])
 
-        st.markdown("**Alert-Typ**")
-        st.write(latest_alert["alert_type"])
-    else:
-        st.markdown("**Alert-Priorität**")
-        st.write("none")
+            st.markdown("**Alert-Typ**")
+            st.write(latest_alert["alert_type"])
+        else:
+            st.markdown("**Alert-Priorität**")
+            st.write("none")
 
-        st.markdown("**Alert-Typ**")
-        st.write("kein Alert")
+            st.markdown("**Alert-Typ**")
+            st.write("kein Alert")
 
     with status_col2:
         if not detail_prices.empty:
