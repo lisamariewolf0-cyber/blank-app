@@ -205,7 +205,7 @@ with left_col:
         styled_alerts = (
             alerts_table.style
             .map(style_priority, subset=["Priorität"])
-            .format({"Max. Kursbewegung %": {:.2f}})
+            .format({"Max. Kursbewegung %": "{:.2f}"})
         ) 
 
         st.dataframe(
