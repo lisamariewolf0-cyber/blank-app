@@ -175,7 +175,7 @@ selected_row = customers[customers["customer_name"] == selected_customer].iloc[0
 selected_customer_id = selected_row["id"] 
 
 detail_alerts = alerts[alerts["customer_id"] == selected_customer_id] if not alerts.empty else pd.DataFrame() 
-detail_prices = prices[prices["customer_id"] == selected_customer_id] if not prices.empty else pd.DataFrame() col1, col2 = st.columns(2) 
+detail_prices = prices[prices["customer_id"] == selected_customer_id] if not prices.empty else pd.DataFrame() 
 
 col1, col2 = st.columns(2)
 
