@@ -31,7 +31,7 @@ def detail_box(label, value, bg="#F8FAFC", border="#E5E7EB"):
         border: 1px solid {border};
         border-radius: 10px;
         padding: 12px 14px;
-        min-height: 78px;
+        min-height: 68px;
         margin-bottom: 8px;
     ">
         <div style="
