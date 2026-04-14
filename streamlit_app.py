@@ -82,103 +82,113 @@ selected_sector = st.selectbox("Branche filtern", sector_options)
 
 st.divider() 
 
-left_col, right_col = st.columns([1,1.2]) 
+st.divider()
 
-with left_col: st.subheader ("Alerts des Tages") 
+left_col, right_col = st.columns([1, 1.2])
+
+with left_col:
+    st.subheader("Alerts des Tages")
 
     if alerts.empty:
         st.warning("Keine Alerts gefunden.")
-    else: 
-        alerts_view = alerts.merge( 
-            customers, 
-            left_on="customer_id", 
-               right_on="id", 
-            how="left" 
+    else:
+        alerts_view = alerts.merge(
+            customers,
+            left_on="customer_id",
+            right_on="id",
+            how="left"
         )
 
-    if selected_sector != "Alle":
-        alerts_view = alerts_view[alerts_view["sector"] == selected_sector]
-    
-    st.metric("Anzahl Alerts", len(alerts_view)) 
+        if selected_sector != "Alle":
+            alerts_view = alerts_view[alerts_view["sector"] == selected_sector]
 
-    st.dataframe( 
-        alerts_view[ 
-            [ 
-                "customer_name", 
-                "sector", 
-                "alert_date", 
-                "alert_priority", 
-                "alert_type", 
-                "max_abs_price_change_pct", 
-                "alert_status", 
-                "alert_reason", 
-            ] 
-        ].rename( 
-            columns={ 
-                "customer_name": "Kunde", 
-                "sector": "Branche", 
-                "alert_date": "Datum", 
-                "alert_priority": "Priorität", 
-                "alert_type": "Alert-Typ", 
-                "max_abs_price_change_pct": "Max. Kursbewegung %", 
-                "alert_status": "Status", 
-                "alert_reason": "Begründung", 
-            } 
-        ), 
-        use_container_width=True, 
-        hide_index=True, 
-    ) 
+        st.metric("Anzahl Alerts", len(alerts_view))
 
-with right_col: st.subheader("Kundendetail") 
+        st.dataframe(
+            alerts_view[
+                [
+                    "customer_name",
+                    "sector",
+                    "alert_date",
+                    "alert_priority",
+                    "alert_type",
+                    "max_abs_price_change_pct",
+                    "alert_status",
+                    "alert_reason",
+                ]
+            ].rename(
+                columns={
+                    "customer_name": "Kunde",
+                    "sector": "Branche",
+                    "alert_date": "Datum",
+                    "alert_priority": "Priorität",
+                    "alert_type": "Alert-Typ",
+                    "max_abs_price_change_pct": "Max. Kursbewegung %",
+                    "alert_status": "Status",
+                    "alert_reason": "Begründung",
+                }
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+with right_col:
+    st.subheader("Kundendetail")
 
     if selected_sector != "Alle":
         filtered_customers = customers[customers["sector"] == selected_sector].copy()
     else:
         filtered_customers = customers.copy()
 
-    customer_options = filtered_customers["customer_name"].sort_values().tolist() 
-    selected_customer = st.selectbox("Kunde auswählen", customer_options) 
+    customer_options = filtered_customers["customer_name"].sort_values().tolist()
+    selected_customer = st.selectbox("Kunde auswählen", customer_options)
 
-    selected_row = filtered_customers[filtered_customers["customer_name"] == selected_customer].iloc[0]
-    selected_customer_id = selected_row["id"] 
+    selected_row = filtered_customers[
+        filtered_customers["customer_name"] == selected_customer
+    ].iloc[0]
+    selected_customer_id = selected_row["id"]
 
-    detail_alerts = alerts[alerts["customer_id"] == selected_customer_id] if not alerts.empty else pd.DataFrame() 
-    detail_prices = prices[prices["customer_id"] == selected_customer_id] if not prices.empty else pd.DataFrame() 
+    detail_alerts = (
+        alerts[alerts["customer_id"] == selected_customer_id]
+        if not alerts.empty
+        else pd.DataFrame()
+    )
+
+    detail_prices = (
+        prices[prices["customer_id"] == selected_customer_id]
+        if not prices.empty
+        else pd.DataFrame()
+    )
+
     detail_news = (
         news[news["customer_id"] == selected_customer_id]
         if not news.empty
         else pd.DataFrame()
     )
 
-    col1, col2 = st.columns(2)
+    st.markdown("**Stammdaten**")
+    st.write(f"Kunde: {selected_row['customer_name']}")
+    st.write(f"Branche: {selected_row['sector']}")
+    st.write(f"Ticker: {selected_row['ticker']}")
+    st.write(f"Kurse tracken: {selected_row['track_price']}")
 
-    with col1: 
-        st.markdown("**Stammdaten**") 
-        st.write(f"Kunde: {selected_row['customer_name']}") 
-        st.write(f"Branche: {selected_row['sector']}") 
-        st.write(f"Ticker: {selected_row['ticker']}") 
-        st.write(f"Kurse tracken: {selected_row['track_price']}") 
+    st.markdown("**Aktueller Status**")
+    if not detail_alerts.empty:
+        latest_alert = detail_alerts.sort_values("alert_date").iloc[-1]
+        st.write(f"Alert-Priorität: {latest_alert['alert_priority']}")
+        st.write(f"Alert-Typ: {latest_alert['alert_type']}")
+        st.write(f"Begründung: {latest_alert['alert_reason']}")
+    else:
+        st.write("Kein Alert vorhanden.")
 
-    with col2: 
-        st.markdown("**Aktueller Status**") 
-
-        if not detail_alerts.empty: 
-            latest_alert = detail_alerts.sort_values("alert_date").iloc[-1] 
-            st.write(f"Alert-Priorität: {latest_alert['alert_priority']}") 
-            st.write(f"Alert-Typ: {latest_alert['alert_type']}") 
-            st.write(f"Begründung: {latest_alert['alert_reason']}") 
-        else: 
-            st.write("Kein Alert vorhanden.") 
-
-        if not detail_prices.empty: 
-            latest_price = detail_prices.sort_values("trading_date").iloc[-1] 
-            st.write(f"Letzter Kurs: {latest_price['close_price']}") 
-            st.write(f"Veränderung zum Vortag %: {latest_price['pct_change']}") 
-        else: 
-            st.write("Kein Kursdatensatz vorhanden.")
+    if not detail_prices.empty:
+        latest_price = detail_prices.sort_values("trading_date").iloc[-1]
+        st.write(f"Letzter Kurs: {latest_price['close_price']}")
+        st.write(f"Veränderung zum Vortag %: {latest_price['pct_change']}")
+    else:
+        st.write("Kein Kursdatensatz vorhanden.")
 
     st.markdown("**Neueste Meldungen**")
-
     if not detail_news.empty:
         detail_news = detail_news.sort_values("published_at", ascending=False)
 
