@@ -11,6 +11,19 @@ def priority_order(value):
     }
     return order.get(str(value).lower(), 99)
 
+def style_priority(val):
+    val = str(val).lower()
+
+    if val == "high":
+        return "background-color: #FDECEC; color: #A61B1B; font-weight: 700;"
+    elif val == "medium":
+        return "background-color: #FFF4E5; color: #9A5B00; font-weight: 700;"
+    elif val == "low":
+        return "background-color: #EAF4FF; color: #1D4F91; font-weight: 700;"
+    elif val == "none":
+        return "background-color: #F3F4F6; color: #4B5563; font-weight: 600;"
+    return ""
+
 st.set_page_config(page_title="Credit Early Warning Dashboard", layout="wide")
 
 st.title("Credit Early Warning Dashboard")
