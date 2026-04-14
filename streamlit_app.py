@@ -77,6 +77,9 @@ with col4:
 
 st.divider()
 
+sector_options = ["Alle"] + sorted(customers["sector"].dropna().unique().tolist())
+selected_sector = st.selectbox("Branche filtern", sector_options)
+
 if alerts.empty:
     st.warning("Keine Alerts gefunden.")
 
