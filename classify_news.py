@@ -2,6 +2,11 @@ import os
 from datetime import datetime, date, timezone
 
 from openai import OpenAI
+
+client = OpenAI(
+    api_key=os.environ["GROQ_API_KEY"],
+    base_url="https://api.groq.com/openai/v1",
+)
 from supabase import create_client
 
 
