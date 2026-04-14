@@ -34,10 +34,21 @@ prices_response = (
         "price_alert_level" 
     ) 
     .execute()
-                  )
+)
+
+news_response = (
+    supabase.table("news_events")
+    .select(
+        "id, customer_id, ingestion_date, published_at, source_name, headline, "
+        "signal_type, sentiment, relevance, llm_summary"
+    )
+    .execute()
+)
+
 customers = pd.DataFrame(customers_response.data)
 alerts = pd.DataFrame(alerts_response.data)
 prices = pd.DataFrame(prices_response.data)
+news = pd.DataFrame(news_response.data)
 
 if customers.empty:
     st.error("Keine Kunden gefunden.")
@@ -176,6 +187,11 @@ selected_customer_id = selected_row["id"]
 
 detail_alerts = alerts[alerts["customer_id"] == selected_customer_id] if not alerts.empty else pd.DataFrame() 
 detail_prices = prices[prices["customer_id"] == selected_customer_id] if not prices.empty else pd.DataFrame() 
+detail_news = (
+    news[news["customer_id"] == selected_customer_id]
+    if not news.empty
+    else pd.DataFrame()
+)
 
 col1, col2 = st.columns(2)
 
@@ -204,7 +220,38 @@ with col2:
     else: 
         st.write("Kein Kursdatensatz vorhanden.")
 
+st.markdown("**Neueste Meldungen**")
 
+if not detail_news.empty:
+    detail_news = detail_news.sort_values("published_at", ascending=False)
+
+    st.dataframe(
+        detail_news[
+            [
+                "published_at",
+                "source_name",
+                "headline",
+                "signal_type",
+                "sentiment",
+                "relevance",
+                "llm_summary",
+            ]
+        ].rename(
+            columns={
+                "published_at": "Zeitpunkt",
+                "source_name": "Quelle",
+                "headline": "Überschrift",
+                "signal_type": "Signalart",
+                "sentiment": "Sentiment",
+                "relevance": "Relevanz",
+                "llm_summary": "Zusammenfassung",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+else:
+    st.write("Keine Meldungen vorhanden.")
 
 
 
