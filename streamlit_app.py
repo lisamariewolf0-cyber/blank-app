@@ -88,7 +88,10 @@ else: alerts_view = alerts.merge(
     left_on="customer_id", 
     right_on="id", 
     how="left" 
-) 
+)
+
+if selected_sector != "Alle":
+    alerts_view = alerts_view[alerts_view["sector"] == selected_sector]
     
 st.metric("Anzahl Alerts", len(alerts_view)) 
 
