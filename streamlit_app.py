@@ -186,6 +186,8 @@ if not alerts.empty:
         use_container_width=True,
         hide_index=True,
     )
+
+    st.subheader("Kundenübersicht")
     
     st.dataframe( 
         portfolio_view[ 
