@@ -221,29 +221,43 @@ with right_col:
 
     status_col1, status_col2 = st.columns(2)
 
-    with status_col1:
-        if not detail_alerts.empty:
-            latest_alert = detail_alerts.sort_values("alert_date").iloc[-1]
-            st.markdown("Alert-Priorität", latest_alert["alert_priority"])
-            st.write(f"**Alert-Typ:** {latest_alert['alert_type']}")
-        else:
-            st.marktdown("Alert-Priorität", "none")
-            st.write("**Alert-Typ:** kein Alert")
+   with status_col1:
+    if not detail_alerts.empty:
+        latest_alert = detail_alerts.sort_values("alert_date").iloc[-1]
+
+        st.markdown("**Alert-Priorität**")
+        st.write(latest_alert["alert_priority"])
+
+        st.markdown("**Alert-Typ**")
+        st.write(latest_alert["alert_type"])
+    else:
+        st.markdown("**Alert-Priorität**")
+        st.write("none")
+
+        st.markdown("**Alert-Typ**")
+        st.write("kein Alert")
 
     with status_col2:
         if not detail_prices.empty:
             latest_price = detail_prices.sort_values("trading_date").iloc[-1]
-            st.markdown("Letzter Kurs", latest_price["close_price"])
-            st.markdown("Vortag %", latest_price["pct_change"])
-        else:
-            st.metric("Letzter Kurs", "n/a")
-            st.metric("Vortag %", "n/a")
 
-    st.markdown("#### Begründung")
-    if not detail_alerts.empty:
-        st.write(latest_alert["alert_reason"])
-    else:
-        st.write("Kein Alert vorhanden.")
+            st.markdown("**Letzter Kurs**")
+            st.write(f"{latest_price['close_price']:.2f}")
+
+            st.markdown("**Veränderung zum Vortag %**")
+            st.write(f"{latest_price['pct_change']:.2f}")
+        else:
+            st.markdown("**Letzter Kurs**")
+            st.write("n/a")
+
+            st.markdown("**Veränderung zum Vortag %**")
+            st.write("n/a")
+
+        st.markdown("#### Begründung")
+        if not detail_alerts.empty:
+            st.write(latest_alert["alert_reason"])
+        else:
+            st.write("Kein Alert vorhanden.")
 
     st.markdown("#### Neueste Meldungen")
 
