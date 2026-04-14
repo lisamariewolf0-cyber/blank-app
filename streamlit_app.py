@@ -137,36 +137,35 @@ with left_col:
       
         st.metric("Anzahl Alerts", len(alerts_view))
 
+        alerts_table = alerts_view[
+            [
+                "customer_name",
+                "sector",
+                "alert_priority",
+                "alert_type",
+                "max_abs_price_change_pct",
+                "alert_status",
+                "alert_reason",
+            ]
+        ].rename(
+            columns={
+                "customer_name": "Kunde",
+                "sector": "Branche",
+                "alert_priority": "Priorität",
+                "alert_type": "Alert-Typ",
+                "max_abs_price_change_pct": "Max. Kursbewegung %",
+                "alert_status": "Status",
+                "alert_reason": "Begründung",
+            }
+        )
+
+        styled_alerts = alerts_table.style.map(style_priority, subset=["Priorität"])
+
         st.dataframe(
-            alerts_view[
-                [
-                    "customer_name",
-                    "sector",
-                    "alert_priority",
-                    "alert_type",
-                    "max_abs_price_change_pct",
-                    "alert_status",
-                    "alert_reason",
-                ]
-            ].rename(
-                columns={
-                    "customer_name": "Kunde",
-                    "sector": "Branche",
-                    "alert_priority": "Priorität",
-                    "alert_type": "Alert-Typ",
-                    "max_abs_price_change_pct": "Max. Kursbewegung %",
-                    "alert_status": "Status",
-                    "alert_reason": "Begründung",
-                }
-            )
-
-            styled_alerts = alerts_table.style.map(style_priority, subset=["Priorität"])
-
-            st.dataframe(
-                styled_alerts,
-                use_container_width=True,
-                hide_index=True,
-            )
+            styled_alerts,
+            use_container_width=True,
+            hide_index=True,
+        )
 
 with right_col:
     st.subheader("Kundendetail")
