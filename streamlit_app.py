@@ -171,7 +171,7 @@ if not alerts.empty:
         .reset_index()
     )
 
-    st.subheader("Branchenüberblick")
+    st.markdown("Branchenüberblick")
 
     st.dataframe(
         sector_overview.rename(
@@ -187,7 +187,7 @@ if not alerts.empty:
         hide_index=True,
     )
 
-    st.subheader("Kundenübersicht")
+    st.markdown("Kundenübersicht")
     
     st.dataframe( 
         portfolio_view[ 
