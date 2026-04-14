@@ -24,6 +24,30 @@ def style_priority(val):
         return "background-color: #F3F4F6; color: #4B5563; font-weight: 600;"
     return ""
 
+def detail_box(label, value, bg="#F8FAFC", border="#E5E7EB"):
+    return f"""
+    <div style="
+        background: {bg};
+        border: 1px solid {border};
+        border-radius: 10px;
+        padding: 12px 14px;
+        min-height: 78px;
+        margin-bottom: 8px;
+    ">
+        <div style="
+            font-size: 0.8rem;
+            color: #6B7280;
+            margin-bottom: 6px;
+        ">{label}</div>
+        <div style="
+            font-size: 1rem;
+            font-weight: 600;
+            color: #111827;
+            line-height: 1.35;
+        ">{value}</div>
+    </div>
+    """
+
 st.set_page_config(page_title="Credit Early Warning Dashboard", layout="wide")
 
 st.title("Credit Early Warning Dashboard")
@@ -201,61 +225,91 @@ with right_col:
         else pd.DataFrame()
     )
 
-    st.markdown("#### Überblick")
+   st.markdown("#### Überblick")
 
-    info_col1, info_col2, info_col3 = st.columns([1.2, 1.2, 0.8])
-
-    with info_col1:
-        st.markdown("**Kunde**")
-        st.caption(selected_row["customer_name"])
-
-    with info_col2:
-        st.markdown("**Branche**")
-        st.caption(selected_row["sector"])
-
-    with info_col3:
-        st.markdown("**Ticker**")
-        st.caption(selected_row["ticker"])
-
-    status_col1, status_col2 = st.columns(2)
-
-    with status_col1:
-        if not detail_alerts.empty:
-            latest_alert = detail_alerts.sort_values("alert_date").iloc[-1]
-
-            st.markdown("**Alert-Priorität**")
-            st.write(latest_alert["alert_priority"])
-
-            st.markdown("**Alert-Typ**")
-            st.write(latest_alert["alert_type"])
-        else:
-            st.markdown("**Alert-Priorität**")
-            st.write("none")
-
-            st.markdown("**Alert-Typ**")
-            st.write("kein Alert")
-
-    with status_col2:
-        if not detail_prices.empty:
-            latest_price = detail_prices.sort_values("trading_date").iloc[-1]
-
-            st.markdown("**Letzter Kurs**")
-            st.write(f"{latest_price['close_price']:.2f}")
-
-            st.markdown("**Veränderung zum Vortag %**")
-            st.write(f"{latest_price['pct_change']:.2f}")
-        else:
-            st.markdown("**Letzter Kurs**")
-            st.write("n/a")
-
-            st.markdown("**Veränderung zum Vortag %**")
-            st.write("n/a")
-
-        st.markdown("#### Begründung")
-        if not detail_alerts.empty:
-            st.write(latest_alert["alert_reason"])
-        else:
-            st.write("Kein Alert vorhanden.")
+    if not detail_alerts.empty:
+        latest_alert = detail_alerts.sort_values("alert_date").iloc[-1]
+        alert_priority_value = latest_alert["alert_priority"]
+        alert_type_value = latest_alert["alert_type"]
+        reason_value = latest_alert["alert_reason"]
+    else:
+        alert_priority_value = "none"
+        alert_type_value = "kein Alert"
+        reason_value = "Kein Alert vorhanden."
+    
+    if not detail_prices.empty:
+        latest_price = detail_prices.sort_values("trading_date").iloc[-1]
+        last_price_value = f"{latest_price['close_price']:.2f}"
+        pct_change_value = f"{latest_price['pct_change']:.2f} %"
+    else:
+        last_price_value = "n/a"
+        pct_change_value = "n/a"
+    
+    priority_bg = "#F3F4F6"
+    priority_border = "#D1D5DB"
+    
+    if str(alert_priority_value).lower() == "high":
+        priority_bg = "#FDECEC"
+        priority_border = "#F5C2C7"
+    elif str(alert_priority_value).lower() == "medium":
+        priority_bg = "#FFF4E5"
+        priority_border = "#F3D19C"
+    elif str(alert_priority_value).lower() == "low":
+        priority_bg = "#EAF4FF"
+        priority_border = "#B9D6F2"
+    
+    top1, top2, top3 = st.columns([1.4, 1.2, 0.8])
+    
+    with top1:
+        st.markdown(detail_box("Kunde", selected_row["customer_name"]), unsafe_allow_html=True)
+    
+    with top2:
+        st.markdown(detail_box("Branche", selected_row["sector"]), unsafe_allow_html=True)
+    
+    with top3:
+        st.markdown(detail_box("Ticker", selected_row["ticker"]), unsafe_allow_html=True)
+    
+    mid1, mid2, mid3, mid4 = st.columns(4)
+    
+    with mid1:
+        st.markdown(
+            detail_box("Alert-Priorität", alert_priority_value, bg=priority_bg, border=priority_border),
+            unsafe_allow_html=True
+        )
+    
+    with mid2:
+        st.markdown(detail_box("Alert-Typ", alert_type_value), unsafe_allow_html=True)
+    
+    with mid3:
+        st.markdown(detail_box("Letzter Kurs", last_price_value), unsafe_allow_html=True)
+    
+    with mid4:
+        st.markdown(detail_box("Veränderung zum Vortag", pct_change_value), unsafe_allow_html=True)
+    
+    st.markdown(
+        f"""
+        <div style="
+            background: #F8FAFC;
+            border: 1px solid #E5E7EB;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-top: 6px;
+            margin-bottom: 12px;
+        ">
+            <div style="
+                font-size: 0.8rem;
+                color: #6B7280;
+                margin-bottom: 6px;
+            ">Begründung</div>
+            <div style="
+                font-size: 0.96rem;
+                color: #111827;
+                line-height: 1.45;
+            ">{reason_value}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    ) 
 
     st.markdown("#### Neueste Meldungen")
 
