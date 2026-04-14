@@ -201,7 +201,7 @@ with right_col:
         else pd.DataFrame()
     )
 
-   st.markdown("#### Überblick")
+    st.markdown("#### Überblick")
 
     info_col1, info_col2, info_col3 = st.columns([1.2, 1.2, 0.8])
 
