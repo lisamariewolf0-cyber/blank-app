@@ -224,17 +224,17 @@ with right_col:
     with status_col1:
         if not detail_alerts.empty:
             latest_alert = detail_alerts.sort_values("alert_date").iloc[-1]
-            st.metric("Alert-Priorität", latest_alert["alert_priority"])
+            st.markdown("Alert-Priorität", latest_alert["alert_priority"])
             st.write(f"**Alert-Typ:** {latest_alert['alert_type']}")
         else:
-            st.metric("Alert-Priorität", "none")
+            st.marktdown("Alert-Priorität", "none")
             st.write("**Alert-Typ:** kein Alert")
 
     with status_col2:
         if not detail_prices.empty:
             latest_price = detail_prices.sort_values("trading_date").iloc[-1]
-            st.metric("Letzter Kurs", latest_price["close_price"])
-            st.metric("Vortag %", latest_price["pct_change"])
+            st.markdown("Letzter Kurs", latest_price["close_price"])
+            st.markdown("Vortag %", latest_price["pct_change"])
         else:
             st.metric("Letzter Kurs", "n/a")
             st.metric("Vortag %", "n/a")
