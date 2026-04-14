@@ -224,10 +224,15 @@ if not alerts.empty:
 st.divider() 
 st.subheader("Kundendetail") 
 
-customer_options = customers["customer_name"].sort_values().tolist() 
+if selected_sector != "Alle":
+    filtered_customers = customers[customers["sector"] == selected_sector].copy()
+else:
+    filtered_customers = customers.copy()
+
+customer_options = filtered_customers["customer_name"].sort_values().tolist() 
 selected_customer = st.selectbox("Kunde auswählen", customer_options) 
 
-selected_row = customers[customers["customer_name"] == selected_customer].iloc[0] 
+selected_row = filtered_customers[filtered_customers["customer_name"] == selected_customer].iloc[0]
 selected_customer_id = selected_row["id"] 
 
 detail_alerts = alerts[alerts["customer_id"] == selected_customer_id] if not alerts.empty else pd.DataFrame() 
