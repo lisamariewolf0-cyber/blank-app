@@ -201,57 +201,72 @@ with right_col:
         else pd.DataFrame()
     )
 
-    st.markdown("**Stammdaten**")
-    st.write(f"Kunde: {selected_row['customer_name']}")
-    st.write(f"Branche: {selected_row['sector']}")
-    st.write(f"Ticker: {selected_row['ticker']}")
-    st.write(f"Kurse tracken: {selected_row['track_price']}")
+    st.markdown("#### Überblick")
 
-    st.markdown("**Aktueller Status**")
+    info_col1, info_col2 = st.columns(2)
+
+    with info_col1:
+        st.metric("Kunde", selected_row["customer_name"])
+        st.metric("Branche", selected_row["sector"])
+
+    with info_col2:
+        st.metric("Ticker", selected_row["ticker"])
+        st.metric("Kurse tracken", str(selected_row["track_price"]))
+
+    status_col1, status_col2 = st.columns(2)
+
+    with status_col1:
+        if not detail_alerts.empty:
+            latest_alert = detail_alerts.sort_values("alert_date").iloc[-1]
+            st.metric("Alert-Priorität", latest_alert["alert_priority"])
+            st.write(f"**Alert-Typ:** {latest_alert['alert_type']}")
+        else:
+            st.metric("Alert-Priorität", "none")
+            st.write("**Alert-Typ:** kein Alert")
+
+    with status_col2:
+        if not detail_prices.empty:
+            latest_price = detail_prices.sort_values("trading_date").iloc[-1]
+            st.metric("Letzter Kurs", latest_price["close_price"])
+            st.metric("Vortag %", latest_price["pct_change"])
+        else:
+            st.metric("Letzter Kurs", "n/a")
+            st.metric("Vortag %", "n/a")
+
+    st.markdown("#### Begründung")
     if not detail_alerts.empty:
-        latest_alert = detail_alerts.sort_values("alert_date").iloc[-1]
-        st.write(f"Alert-Priorität: {latest_alert['alert_priority']}")
-        st.write(f"Alert-Typ: {latest_alert['alert_type']}")
-        st.write(f"Begründung: {latest_alert['alert_reason']}")
+        st.write(latest_alert["alert_reason"])
     else:
         st.write("Kein Alert vorhanden.")
 
-    if not detail_prices.empty:
-        latest_price = detail_prices.sort_values("trading_date").iloc[-1]
-        st.write(f"Letzter Kurs: {latest_price['close_price']}")
-        st.write(f"Veränderung zum Vortag %: {latest_price['pct_change']}")
-    else:
-        st.write("Kein Kursdatensatz vorhanden.")
+    st.markdown("#### Neueste Meldungen")
 
-    st.markdown("**Neueste Meldungen**")
     if not detail_news.empty:
-        detail_news = detail_news.sort_values("published_at", ascending=False)
+        detail_news = detail_news.sort_values("published_at", ascending=False).head(3)
 
-        st.dataframe(
-            detail_news[
-                [
-                    "published_at",
-                    "source_name",
-                    "headline",
-                    "signal_type",
-                    "sentiment",
-                    "relevance",
-                    "llm_summary",
-                ]
-            ].rename(
-                columns={
-                    "published_at": "Zeitpunkt",
-                    "source_name": "Quelle",
-                    "headline": "Überschrift",
-                    "signal_type": "Signalart",
-                    "sentiment": "Sentiment",
-                    "relevance": "Relevanz",
-                    "llm_summary": "Zusammenfassung",
-                }
-            ),
-            use_container_width=True,
-            hide_index=True,
+        news_table = detail_news[
+            [
+                "published_at",
+                "source_name",
+                "headline",
+                "signal_type",
+                "relevance",
+            ]
+        ].rename(
+            columns={
+                "published_at": "Zeitpunkt",
+                "source_name": "Quelle",
+                "headline": "Überschrift",
+                "signal_type": "Signalart",
+                "relevance": "Relevanz",
+            }
         )
+
+        st.dataframe(news_table, use_container_width=True, hide_index=True)
+
+        for _, row in detail_news.iterrows():
+            if pd.notnull(row.get("llm_summary")) and str(row["llm_summary"]).strip():
+                st.caption(f"{row['source_name']}: {row['llm_summary']}")
     else:
         st.write("Keine Meldungen vorhanden.")
         
