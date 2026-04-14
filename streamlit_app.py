@@ -1,81 +1,26 @@
+import pandas as pd
 import streamlit as st
+from supabase import create_client
 
 st.set_page_config(page_title="Credit Early Warning Dashboard", layout="wide")
 
 st.title("Credit Early Warning Dashboard")
-st.subheader("Frühwarnsystem für Kreditanalysten")
+st.subheader("Verbindungstest zu Supabase")
 
-col1, col2, col3, col4 = st.columns(4)
+supabase = create_client(
+    st.secrets["SUPABASE_URL"],
+    st.secrets["SUPABASE_KEY"]
+)
 
-with col1:
-    st.metric("Offene Alerts", "3")
+response = (
+    supabase.table("customers")
+    .select("id, customer_name, legal_name, ticker, sector, track_price")
+    .execute()
+)
 
-with col2:
-    st.metric("High Alerts", "2")
+customers = pd.DataFrame(response.data)
 
-with col3:
-    st.metric("Kunden mit Kursbewegung > 3%", "2")
+st.metric("Anzahl Kunden", len(customers))
 
-with col4:
-    st.metric("Neue Meldungen", "5")
-
-st.divider()
-
-st.subheader("Alerts des Tages")
-
-st.table([
-    {
-        "Kunde": "Bayer",
-        "Priorität": "high",
-        "Alert-Typ": "combined",
-        "Begründung": "Gewinnwarnung und Kursrückgang über 5 Prozent"
-    },
-    {
-        "Kunde": "BMW",
-        "Priorität": "medium",
-        "Alert-Typ": "news_only",
-        "Begründung": "Relevanter Managementwechsel ohne starke Kursreaktion"
-    },
-    {
-        "Kunde": "Volkswagen",
-        "Priorität": "high",
-        "Alert-Typ": "combined",
-        "Begründung": "Negative Presse kombiniert mit deutlicher Kursbewegung"
-    }
-])
-
-st.divider()
-
-st.subheader("Portfolioübersicht")
-
-st.table([
-    {
-        "Kunde": "BASF",
-        "Branche": "Chemie & Life Sciences",
-        "Letzter Kurs": "48.30",
-        "Veränderung zum Vortag %": "0.63",
-        "Heutiger Alert": "none"
-    },
-    {
-        "Kunde": "Bayer",
-        "Branche": "Chemie & Life Sciences",
-        "Letzter Kurs": "24.50",
-        "Veränderung zum Vortag %": "-5.77",
-        "Heutiger Alert": "high"
-    },
-    {
-        "Kunde": "BMW",
-        "Branche": "Automotive",
-        "Letzter Kurs": "101.00",
-        "Veränderung zum Vortag %": "-1.94",
-        "Heutiger Alert": "medium"
-    }
-])
-
-st.divider()
-
-st.subheader("KI-Agent")
-user_question = st.text_input("Frage zum Portfolio", placeholder="Was ist heute bei Bayer passiert?")
-
-if user_question:
-    st.write("Antwort des KI-Agenten erscheint hier im nächsten Schritt.")
+st.write("Kundentabelle aus Supabase:")
+st.dataframe(customers, use_container_width=True, hide_index=True)
