@@ -2,12 +2,14 @@ import pandas as pd
 import streamlit as st
 from supabase import create_client
 
-alert_dates = sorted(alerts_view["alert_date"].dropna().astype(str).unique().tolist())
-
-if len(alert_dates) == 1:
-    st.markdown(f"**Stand Alerts:** {alert_dates[0]}")
-elif len(alert_dates) > 1:
-    st.markdown(f"**Stand Alerts:** {', '.join(alert_dates)}")
+def priority_order(value):
+    order = {
+        "high": 0,
+        "medium": 1,
+        "low": 2,
+        "none": 3
+    }
+    return order.get(str(value).lower(), 99)
 
 st.set_page_config(page_title="Credit Early Warning Dashboard", layout="wide")
 
@@ -114,6 +116,12 @@ with left_col:
         elif len(alert_dates) > 1:
             st.markdown(f"**Stand Alerts:** {', '.join(alert_dates)}")
         
+        alerts_view["priority_rank"] = alerts_view["alert_priority"].apply(priority_order)
+        alerts_view = alerts_view.sort_values(
+            by=["priority_rank", "customer_name"],
+            ascending=[True, True]
+        )
+      
         st.metric("Anzahl Alerts", len(alerts_view))
 
         st.dataframe(
