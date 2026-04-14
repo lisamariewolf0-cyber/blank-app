@@ -82,8 +82,6 @@ selected_sector = st.selectbox("Branche filtern", sector_options)
 
 st.divider() 
 
-st.divider()
-
 left_col, right_col = st.columns([2, 1])
 
 with left_col:
