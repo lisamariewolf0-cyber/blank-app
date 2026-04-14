@@ -149,6 +149,43 @@ if not alerts.empty:
     ) 
     
     portfolio_view["alert_priority"] = portfolio_view["alert_priority"].fillna("none") 
+
+    sector_view = portfolio_view.copy()
+
+    sector_view["has_alert"] = sector_view["alert_priority"].apply(
+        lambda x: 0 if x == "none" else 1
+    )
+
+    sector_view["has_high_alert"] = sector_view["alert_priority"].apply(
+        lambda x: 1 if x == "high" else 0
+    )
+
+    sector_overview = (
+        sector_view.groupby("sector", dropna=False)
+        .agg(
+            kunden_anzahl=("customer_name", "count"),
+            alerts_anzahl=("has_alert", "sum"),
+            high_alerts=("has_high_alert", "sum"),
+            durchschnitt_kursveraenderung=("pct_change", "mean"),
+        )
+        .reset_index()
+    )
+
+    st.subheader("Branchenüberblick")
+
+    st.dataframe(
+        sector_overview.rename(
+            columns={
+                "sector": "Branche",
+                "kunden_anzahl": "Anzahl Kunden",
+                "alerts_anzahl": "Anzahl Alerts",
+                "high_alerts": "High Alerts",
+                  "durchschnitt_kursveraenderung": "Ø Kursveränderung %",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
     
     st.dataframe( 
         portfolio_view[ 
