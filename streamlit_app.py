@@ -202,7 +202,11 @@ with left_col:
             }
         )
 
-        styled_alerts = alerts_table.style.map(style_priority, subset=["Priorität"])
+        styled_alerts = (
+            alerts_table.style
+            .map(style_priority, subset=["Priorität"])
+            .format({"Max. Kursbewegung %": {:.2f})
+        ) 
 
         st.dataframe(
             styled_alerts,
@@ -455,7 +459,14 @@ if not alerts.empty:
         }
     )
 
-    styled_portfolio = portfolio_table.style.map(style_priority, subset=["Heutiger Alert"])
+    styled_portfolio = (
+        portfolio_table.style
+        .map(style_priority, subset=["Heutiger Alert"])
+        .format({
+            "Letzter Kurs": "{:.2f}",
+            "Veränderung zum Vortag %": "{:.2f}",
+            })
+    )
 
     st.dataframe(
         styled_portfolio,
