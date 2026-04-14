@@ -203,21 +203,19 @@ with right_col:
 
     st.markdown("#### Überblick")
 
-    info_col1, info_col2 = st.columns(2)
+    info_col1, info_col2, info_col3 = st.columns(1.2, 1.2, 0.8)
 
     with info_col1:
         st.markdown("**Kunde**")
         st.write(selected_row["customer_name"])
 
+    with info_col2:
         st.markdown("**Branche**")
         st.write(selected_row["sector"])
 
-    with info_col2:
+    with info_col3:
         st.markdown("**Ticker**")
         st.write(selected_row["ticker"])
-
-        st.markdown("**Kurse tracken**")
-        st.write(str(selected_row["track_price"]))
 
     status_col1, status_col2 = st.columns(2)
 
