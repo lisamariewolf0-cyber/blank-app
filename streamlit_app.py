@@ -206,12 +206,18 @@ with right_col:
     info_col1, info_col2 = st.columns(2)
 
     with info_col1:
-        st.metric("Kunde", selected_row["customer_name"])
-        st.metric("Branche", selected_row["sector"])
+        st.markdown("**Kunde**")
+        st.write(selected_row["customer_name"])
+
+        st.markdown("**Branche**")
+        st.write(selected_row["sector"])
 
     with info_col2:
-        st.metric("Ticker", selected_row["ticker"])
-        st.metric("Kurse tracken", str(selected_row["track_price"]))
+        st.markdown("**Ticker**")
+        st.write(selected_row["ticker"])
+
+        st.markdown("**Kurse tracken**")
+        st.write(str(selected_row["track_price"]))
 
     status_col1, status_col2 = st.columns(2)
 
