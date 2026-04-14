@@ -37,6 +37,7 @@ prices_response = (
                   )
 customers = pd.DataFrame(customers_response.data)
 alerts = pd.DataFrame(alerts_response.data)
+prices = pd.DataFrame(prices_response.data)
 
 if customers.empty:
     st.error("Keine Kunden gefunden.")
