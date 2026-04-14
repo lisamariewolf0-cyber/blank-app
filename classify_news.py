@@ -29,59 +29,17 @@ raw_news = {
     "matched_alias": "Bayer",
 }
 
-schema = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "news_classification",
-        "schema": {
-            "type": "object",
-            "additionalProperties": False,
-            "properties": {
-                "signal_type": {
-                    "type": "string",
-                    "enum": [
-                        "negative_press",
-                        "management_change",
-                        "profit_warning",
-                        "price_related_news",
-                        "other",
-                    ],
-                },
-                "sentiment": {
-                    "type": "string",
-                    "enum": ["negative", "neutral", "positive"],
-                },
-                "relevance": {
-                    "type": "string",
-                    "enum": ["high", "medium", "low"],
-                },
-                "triggers_alert_candidate": {
-                    "type": "boolean"
-                },
-                "classification_reason": {
-                    "type": "string"
-                },
-                "llm_summary": {
-                    "type": "string"
-                },
-            },
-            "required": [
-                "signal_type",
-                "sentiment",
-                "relevance",
-                "triggers_alert_candidate",
-                "classification_reason",
-                "llm_summary",
-            ],
-        },
+messages = [
+    {
+        "role": "system",
+        "content": (
+            "Du klassifizierst externe Unternehmensmeldungen für ein Frühwarnsystem "
+            "für Kreditanalysten. Gib nur JSON zurück, exakt passend zum Schema."
+        ),
     },
-}
-
-prompt = f"""
-Du klassifizierst externe Unternehmensmeldungen für ein Frühwarnsystem für Kreditanalysten.
-
-Gib nur ein JSON zurück, das exakt dem Schema entspricht.
-
+    {
+        "role": "user",
+        "content": f"""
 Regeln:
 - "profit_warning" bei Gewinnwarnung, Guidance-Senkung oder ähnlicher finanzieller Verschlechterung
 - "management_change" bei relevantem Wechsel im Top-Management
@@ -100,15 +58,64 @@ Quelle: {raw_news["source_name"]}
 Titel: {raw_news["headline"]}
 Kurztext: {raw_news["summary"]}
 Volltext: {raw_news["raw_text"]}
-"""
+""",
+    },
+]
 
-response = client.responses.create(
+response = client.chat.completions.create(
     model="openai/gpt-oss-20b",
-    input=prompt,
-    text={"format": schema},
+    messages=messages,
+    response_format={
+        "type": "json_schema",
+        "json_schema": {
+            "name": "news_classification",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "signal_type": {
+                        "type": "string",
+                        "enum": [
+                            "negative_press",
+                            "management_change",
+                            "profit_warning",
+                            "price_related_news",
+                            "other",
+                        ],
+                    },
+                    "sentiment": {
+                        "type": "string",
+                        "enum": ["negative", "neutral", "positive"],
+                    },
+                    "relevance": {
+                        "type": "string",
+                        "enum": ["high", "medium", "low"],
+                    },
+                    "triggers_alert_candidate": {
+                        "type": "boolean"
+                    },
+                    "classification_reason": {
+                        "type": "string"
+                    },
+                    "llm_summary": {
+                        "type": "string"
+                    },
+                },
+                "required": [
+                    "signal_type",
+                    "sentiment",
+                    "relevance",
+                    "triggers_alert_candidate",
+                    "classification_reason",
+                    "llm_summary",
+                ],
+            },
+        },
+    },
 )
 
-result = json.loads(response.output_text)
+result = json.loads(response.choices[0].message.content)
 
 news_row = {
     "customer_id": raw_news["customer_id"],
