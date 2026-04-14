@@ -5,7 +5,7 @@ from supabase import create_client
 st.set_page_config(page_title="Credit Early Warning Dashboard", layout="wide")
 
 st.title("Credit Early Warning Dashboard")
-st.subheader("Alerts des Tages")
+st.subheader("Frühwarnsystem für Kreditanalysten")
 
 supabase = create_client(
     st.secrets["SUPABASE_URL"],
@@ -14,7 +14,7 @@ supabase = create_client(
 
 customers_response = (
     supabase.table("customers")
-    .select("id, customer_name, sector")
+    .select("id, customer_name, sector, ticker, track_price")
     .execute()
 )
 
@@ -27,6 +27,14 @@ alerts_response = (
     .execute()
 )
 
+prices_response = ( 
+    supabase.table("price_snapshots") 
+    .select( 
+        "id, customer_id, trading_date, close_price, prev_close_price, pct_change, " 
+        "price_alert_level" 
+    ) 
+    .execute()
+                  )
 customers = pd.DataFrame(customers_response.data)
 alerts = pd.DataFrame(alerts_response.data)
 
@@ -36,41 +44,107 @@ if customers.empty:
 
 if alerts.empty:
     st.warning("Keine Alerts gefunden.")
-    st.stop()
 
-alerts_view = alerts.merge(
-    customers,
-    left_on="customer_id",
-    right_on="id",
-    how="left"
+else: alerts_view = alerts.merge( 
+    customers, 
+    left_on="customer_id", 
+    right_on="id", 
+    how="left" 
+) 
+    
+st.metric("Anzahl Alerts", len(alerts_view)) 
+
+st.dataframe( 
+    alerts_view[ 
+        [ 
+            "customer_name", 
+            "sector", 
+            "alert_date", 
+            "alert_priority", 
+            "alert_type", 
+            "max_abs_price_change_pct", 
+            "alert_status", 
+            "alert_reason", 
+        ] 
+    ].rename( 
+        columns={ 
+            "customer_name": "Kunde", 
+            "sector": "Branche", 
+            "alert_date": "Datum", 
+            "alert_priority": "Priorität", 
+            "alert_type": "Alert-Typ", 
+            "max_abs_price_change_pct": "Max. Kursbewegung %", 
+            "alert_status": "Status", 
+            "alert_reason": "Begründung", 
+        } 
+    ), 
+    use_container_width=True, 
+    hide_index=True, 
+) 
+
+st.divider() 
+st.subheader("Portfolioübersicht") 
+
+portfolio_view = customers.copy() 
+
+if not prices.empty: 
+    latest_prices = prices.sort_values("trading_date").drop_duplicates( 
+        subset=["customer_id"], 
+        keep="last" 
+    ) 
+    
+    portfolio_view = portfolio_view.merge( 
+        latest_prices[["customer_id", "close_price", "pct_change"]], 
+        left_on="id", 
+        right_on="customer_id", 
+        how="left" 
+    ) 
+    
+if not alerts.empty: 
+    latest_alerts = alerts.sort_values("alert_date").drop_duplicates( 
+        subset=["customer_id"], 
+        keep="last" 
+    ) 
+    
+    portfolio_view = portfolio_view.merge( 
+        latest_alerts[["customer_id", "alert_priority"]], 
+        left_on="id", 
+        right_on="customer_id", 
+        how="left" 
+    ) 
+    
+    portfolio_view["alert_priority"] = portfolio_view["alert_priority"].fillna("none") 
+    
+    st.dataframe( 
+        portfolio_view[ 
+        [ 
+            "customer_name", 
+            "sector", 
+            "ticker", 
+            "track_price", 
+            "close_price", 
+            "pct_change", 
+            "alert_priority", 
+        ] 
+    ].rename( 
+        columns={ 
+            "customer_name": "Kunde", 
+            "sector": "Branche", 
+            "ticker": "Ticker", 
+            "track_price": "Kurse tracken", 
+            "close_price": "Letzter Kurs", 
+            "pct_change": "Veränderung zum Vortag %", 
+            "alert_priority": "Heutiger Alert", 
+        } 
+    ), 
+    use_container_width=True, 
+    hide_index=True, 
 )
 
-st.metric("Anzahl Alerts", len(alerts_view))
 
-st.dataframe(
-    alerts_view[
-        [
-            "customer_name",
-            "sector",
-            "alert_date",
-            "alert_priority",
-            "alert_type",
-            "max_abs_price_change_pct",
-            "alert_status",
-            "alert_reason",
-        ]
-    ].rename(
-        columns={
-            "customer_name": "Kunde",
-            "sector": "Branche",
-            "alert_date": "Datum",
-            "alert_priority": "Priorität",
-            "alert_type": "Alert-Typ",
-            "max_abs_price_change_pct": "Max. Kursbewegung %",
-            "alert_status": "Status",
-            "alert_reason": "Begründung",
-        }
-    ),
-    use_container_width=True,
-    hide_index=True,
-)
+
+
+
+
+
+    
