@@ -102,6 +102,13 @@ with left_col:
         if selected_sector != "Alle":
             alerts_view = alerts_view[alerts_view["sector"] == selected_sector]
 
+        alert_dates = sorted(alerts_view["alert_date"].dropna().astype(str).unique().tolist())
+
+        if len(alert_dates) == 1:
+            st.markdown(f"**Stand Alerts:** {alert_dates[0]}")
+        elif len(alert_dates) > 1:
+            st.markdown(f"**Stand Alerts:** {', '.join(alert_dates)}")
+        
         st.metric("Anzahl Alerts", len(alerts_view))
 
         st.dataframe(
@@ -109,7 +116,6 @@ with left_col:
                 [
                     "customer_name",
                     "sector",
-                    "alert_date",
                     "alert_priority",
                     "alert_type",
                     "max_abs_price_change_pct",
@@ -120,7 +126,6 @@ with left_col:
                 columns={
                     "customer_name": "Kunde",
                     "sector": "Branche",
-                    "alert_date": "Datum",
                     "alert_priority": "Priorität",
                     "alert_type": "Alert-Typ",
                     "max_abs_price_change_pct": "Max. Kursbewegung %",
