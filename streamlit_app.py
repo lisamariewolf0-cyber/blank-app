@@ -50,6 +50,25 @@ def detail_box(label, value, bg="#F8FAFC", border="#E5E7EB"):
 
 st.set_page_config(page_title="Credit Early Warning Dashboard", layout="wide")
 
+st.markdown(
+    """
+    <style>
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+    div[data-testid="stDataFrame"] {
+        margin-top: 0.35rem;
+        margin-bottom: 1rem;
+    }
+    h3, h4 {
+        margin-bottom: 0.3rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.title("Credit Early Warning Dashboard")
 st.subheader("Frühwarnsystem für Kreditanalysten")
 
