@@ -225,7 +225,7 @@ with right_col:
         else pd.DataFrame()
     )
 
-   st.markdown("#### Überblick")
+    st.markdown("#### Überblick")
 
     if not detail_alerts.empty:
         latest_alert = detail_alerts.sort_values("alert_date").iloc[-1]
