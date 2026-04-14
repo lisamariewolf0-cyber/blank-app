@@ -158,10 +158,15 @@ with left_col:
                     "alert_status": "Status",
                     "alert_reason": "Begründung",
                 }
-            ),
-            use_container_width=True,
-            hide_index=True,
-        )
+            )
+
+            styled_alerts = alerts_table.style.map(style_priority, subset=["Priorität"])
+
+            st.dataframe(
+                styled_alerts,
+                use_container_width=True,
+                hide_index=True,
+            )
 
 with right_col:
     st.subheader("Kundendetail")
