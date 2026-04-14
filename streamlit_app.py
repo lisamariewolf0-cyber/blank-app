@@ -201,21 +201,21 @@ with right_col:
         else pd.DataFrame()
     )
 
-    st.markdown("#### Überblick")
+   st.markdown("#### Überblick")
 
-    info_col1, info_col2, info_col3 = st.columns(1.2, 1.2, 0.8)
+    info_col1, info_col2, info_col3 = st.columns([1.2, 1.2, 0.8])
 
     with info_col1:
         st.markdown("**Kunde**")
-        st.write(selected_row["customer_name"])
+        st.caption(selected_row["customer_name"])
 
     with info_col2:
         st.markdown("**Branche**")
-        st.write(selected_row["sector"])
+        st.caption(selected_row["sector"])
 
     with info_col3:
         st.markdown("**Ticker**")
-        st.write(selected_row["ticker"])
+        st.caption(selected_row["ticker"])
 
     status_col1, status_col2 = st.columns(2)
 
