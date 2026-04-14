@@ -1,24 +1,21 @@
 import os
-from datetime import datetime, date, timezone
+import json
 
 from openai import OpenAI
+from supabase import create_client
 
 client = OpenAI(
     api_key=os.environ["GROQ_API_KEY"],
     base_url="https://api.groq.com/openai/v1",
 )
-from supabase import create_client
 
-
-openai_client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 supabase = create_client(
     os.environ["SUPABASE_URL"],
     os.environ["SUPABASE_KEY"],
 )
 
-# Testmeldung fuer v1
 raw_news = {
-    "customer_id": 6,  # Bayer
+    "customer_id": 6,
     "source_name": "Reuters",
     "source_type": "newswire",
     "source_url": "",
@@ -26,12 +23,11 @@ raw_news = {
     "published_at": "2026-04-14T08:15:00+02:00",
     "ingestion_date": "2026-04-14",
     "headline": "Bayer senkt Gewinnprognose",
-    "summary": "Unternehmen passt den Finanzausblick fuer das laufende Jahr nach unten an.",
-    "raw_text": "Bayer hat heute mitgeteilt, dass der Finanzausblick fuer das laufende Jahr gesenkt wird. Das Management verweist auf anhaltenden Ergebnisdruck.",
+    "summary": "Unternehmen passt den Finanzausblick für das laufende Jahr nach unten an.",
+    "raw_text": "Bayer hat heute mitgeteilt, dass der Finanzausblick für das laufende Jahr gesenkt wird. Das Management verweist auf anhaltenden Ergebnisdruck.",
     "language": "de",
     "matched_alias": "Bayer",
 }
-
 
 schema = {
     "type": "json_schema",
@@ -82,21 +78,21 @@ schema = {
 }
 
 prompt = f"""
-Du klassifizierst externe Unternehmensmeldungen fuer ein Fruehwarnsystem fuer Kreditanalysten.
+Du klassifizierst externe Unternehmensmeldungen für ein Frühwarnsystem für Kreditanalysten.
 
-Gib nur strukturierte Daten gemaess Schema zurueck.
+Gib nur ein JSON zurück, das exakt dem Schema entspricht.
 
 Regeln:
-- "profit_warning" bei Gewinnwarnung, Guidance-Senkung oder vergleichbarer Verschlechterung
+- "profit_warning" bei Gewinnwarnung, Guidance-Senkung oder ähnlicher finanzieller Verschlechterung
 - "management_change" bei relevantem Wechsel im Top-Management
-- "negative_press" bei negativer Berichterstattung mit moeglicher Kreditrelevanz
+- "negative_press" bei negativer Berichterstattung mit möglicher Kreditrelevanz
 - "price_related_news" nur wenn die Nachricht selbst direkt kursbezogen ist
 - sonst "other"
 
 Relevanz:
 - high: direkt kreditrelevant oder deutliche finanzielle Verschlechterung
 - medium: relevant, aber nicht unmittelbar kritisch
-- low: dokumentationswuerdig, aber kein Warnsignal
+- low: dokumentationswürdig, aber kein Warnsignal
 
 Meldung:
 Kunde-ID: {raw_news["customer_id"]}
@@ -106,13 +102,13 @@ Kurztext: {raw_news["summary"]}
 Volltext: {raw_news["raw_text"]}
 """
 
-response = openai_client.responses.create(
-    model="gpt-4.1",
+response = client.responses.create(
+    model="openai/gpt-oss-20b",
     input=prompt,
     text={"format": schema},
 )
 
-result = response.output[0].content[0].parsed
+result = json.loads(response.output_text)
 
 news_row = {
     "customer_id": raw_news["customer_id"],
