@@ -326,35 +326,36 @@ if not alerts.empty:
 
     st.markdown("Kundenübersicht")
     
-  portfolio_table = portfolio_view[
-    [
-        "customer_name",
-        "sector",
-        "ticker",
-        "track_price",
-        "close_price",
-        "pct_change",
-        "alert_priority",
-    ]
-].rename(
-    columns={
-        "customer_name": "Kunde",
-        "sector": "Branche",
-        "ticker": "Ticker",
-        "track_price": "Kurse tracken",
-        "close_price": "Letzter Kurs",
-        "pct_change": "Veränderung zum Vortag %",
-        "alert_priority": "Heutiger Alert",
-    }
-)
+    portfolio_table = portfolio_view[
+        [
+            "customer_name",
+            "sector",
+            "ticker",
+            "track_price",
+            "close_price",
+            "pct_change",
+            "alert_priority",
+        ]
 
-styled_portfolio = portfolio_table.style.map(style_priority, subset=["Heutiger Alert"])
+    ].rename(
+        columns={
+            "customer_name": "Kunde",
+            "sector": "Branche",
+            "ticker": "Ticker",
+            "track_price": "Kurse tracken",
+            "close_price": "Letzter Kurs",
+            "pct_change": "Veränderung zum Vortag %",
+            "alert_priority": "Heutiger Alert",
+        }
+    )
 
-st.dataframe(
-    styled_portfolio,
-    use_container_width=True,
-    hide_index=True,
-)
+    styled_portfolio = portfolio_table.style.map(style_priority, subset=["Heutiger Alert"])
+
+    st.dataframe(
+        styled_portfolio,
+        use_container_width=True,
+        hide_index=True,
+    )
 
 
 
