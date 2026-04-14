@@ -2,6 +2,13 @@ import pandas as pd
 import streamlit as st
 from supabase import create_client
 
+alert_dates = sorted(alerts_view["alert_date"].dropna().astype(str).unique().tolist())
+
+if len(alert_dates) == 1:
+    st.markdown(f"**Stand Alerts:** {alert_dates[0]}")
+elif len(alert_dates) > 1:
+    st.markdown(f"**Stand Alerts:** {', '.join(alert_dates)}")
+
 st.set_page_config(page_title="Credit Early Warning Dashboard", layout="wide")
 
 st.title("Credit Early Warning Dashboard")
