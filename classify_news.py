@@ -14,32 +14,20 @@ supabase = create_client(
     os.environ["SUPABASE_KEY"],
 )
 
-raw_news = {
-    "customer_id": 6,
-    "source_name": "Reuters",
-    "source_type": "newswire",
-    "source_url": "",
-    "source_external_id": "REU-TEST-20260415-101",
-    "published_at": "2026-04-15T08:15:00+02:00",
-    "ingestion_date": "2026-04-14",
-    "headline": "Bayer senkt Gewinnprognose",
-    "summary": "Unternehmen passt den Finanzausblick für das laufende Jahr nach unten an.",
-    "raw_text": "Bayer hat heute mitgeteilt, dass der Finanzausblick für das laufende Jahr gesenkt wird. Das Management verweist auf anhaltenden Ergebnisdruck.",
-    "language": "de",
-    "matched_alias": "Bayer",
-}
+TARGET_DATE = os.environ.get("INGEST_DATE")
 
-messages = [
-    {
-        "role": "system",
-        "content": (
-            "Du klassifizierst externe Unternehmensmeldungen für ein Frühwarnsystem "
-            "für Kreditanalysten. Gib nur JSON zurück, exakt passend zum Schema."
-        ),
-    },
-    {
-        "role": "user",
-        "content": f"""
+def classification_messages(item: dict):
+    return [
+        {
+            "role": "system",
+            "content": (
+                "Du klassifizierst externe Unternehmensmeldungen für ein Frühwarnsystem "
+                "für Kreditanalysten. Gib nur JSON zurück, exakt passend zum Schema."
+            ),
+        },
+        {
+            "role": "user",
+            "content": f"""
 Regeln:
 - "profit_warning" bei Gewinnwarnung, Guidance-Senkung oder ähnlicher finanzieller Verschlechterung
 - "management_change" bei relevantem Wechsel im Top-Management
@@ -53,96 +41,132 @@ Relevanz:
 - low: dokumentationswürdig, aber kein Warnsignal
 
 Meldung:
-Kunde-ID: {raw_news["customer_id"]}
-Quelle: {raw_news["source_name"]}
-Titel: {raw_news["headline"]}
-Kurztext: {raw_news["summary"]}
-Volltext: {raw_news["raw_text"]}
+Kunde-ID: {item["customer_id"]}
+Quelle: {item["source_name"]}
+Titel: {item["headline"]}
+Kurztext: {item["summary"]}
+Volltext: {item["raw_text"]}
 """,
-    },
-]
+        },
+    ]
 
-response = client.chat.completions.create(
-    model="openai/gpt-oss-20b",
-    messages=messages,
-    response_format={
-        "type": "json_schema",
-        "json_schema": {
-            "name": "news_classification",
-            "strict": True,
-            "schema": {
-                "type": "object",
-                "additionalProperties": False,
-                "properties": {
-                    "signal_type": {
-                        "type": "string",
-                        "enum": [
-                            "negative_press",
-                            "management_change",
-                            "profit_warning",
-                            "price_related_news",
-                            "other",
-                        ],
+
+def classify_item(item: dict) -> dict:
+    response = client.chat.completions.create(
+        model="openai/gpt-oss-20b",
+        messages=classification_messages(item),
+        response_format={
+            "type": "json_schema",
+            "json_schema": {
+                "name": "news_classification",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "signal_type": {
+                            "type": "string",
+                            "enum": [
+                                "negative_press",
+                                "management_change",
+                                "profit_warning",
+                                "price_related_news",
+                                "other",
+                            ],
+                        },
+                        "sentiment": {
+                            "type": "string",
+                            "enum": ["negative", "neutral", "positive"],
+                        },
+                        "relevance": {
+                            "type": "string",
+                            "enum": ["high", "medium", "low"],
+                        },
+                        "triggers_alert_candidate": {"type": "boolean"},
+                        "classification_reason": {"type": "string"},
+                        "llm_summary": {"type": "string"},
                     },
-                    "sentiment": {
-                        "type": "string",
-                        "enum": ["negative", "neutral", "positive"],
-                    },
-                    "relevance": {
-                        "type": "string",
-                        "enum": ["high", "medium", "low"],
-                    },
-                    "triggers_alert_candidate": {
-                        "type": "boolean"
-                    },
-                    "classification_reason": {
-                        "type": "string"
-                    },
-                    "llm_summary": {
-                        "type": "string"
-                    },
+                    "required": [
+                        "signal_type",
+                        "sentiment",
+                        "relevance",
+                        "triggers_alert_candidate",
+                        "classification_reason",
+                        "llm_summary",
+                    ],
                 },
-                "required": [
-                    "signal_type",
-                    "sentiment",
-                    "relevance",
-                    "triggers_alert_candidate",
-                    "classification_reason",
-                    "llm_summary",
-                ],
             },
         },
-    },
-)
+    )
 
-result = json.loads(response.choices[0].message.content)
+    return json.loads(response.choices[0].message.content)
 
-news_row = {
-    "customer_id": raw_news["customer_id"],
-    "source_name": raw_news["source_name"],
-    "source_type": raw_news["source_type"],
-    "source_url": raw_news["source_url"],
-    "source_external_id": raw_news["source_external_id"],
-    "published_at": raw_news["published_at"],
-    "ingestion_date": raw_news["ingestion_date"],
-    "headline": raw_news["headline"],
-    "summary": raw_news["summary"],
-    "raw_text": raw_news["raw_text"],
-    "language": raw_news["language"],
-    "matched_alias": raw_news["matched_alias"],
-    "signal_type": result["signal_type"],
-    "sentiment": result["sentiment"],
-    "relevance": result["relevance"],
-    "relevance_score": None,
-    "is_duplicate": False,
-    "dedupe_key": f'{raw_news["customer_id"]}_{raw_news["source_external_id"]}',
-    "triggers_alert_candidate": result["triggers_alert_candidate"],
-    "classification_reason": result["classification_reason"],
-    "llm_summary": result["llm_summary"],
-}
 
-insert_result = supabase.table("news_events").insert(news_row).execute()
+def already_exists(source_external_id: str, customer_id: int) -> bool:
+    resp = (
+        supabase.table("news_events")
+        .select("id")
+        .eq("source_external_id", source_external_id)
+        .eq("customer_id", customer_id)
+        .limit(1)
+        .execute()
+    )
+    return len(resp.data or []) > 0
 
+
+def save_item(item: dict, cls: dict):
+    row = {
+        "customer_id": item["customer_id"],
+        "source_name": item["source_name"],
+        "source_type": item["source_type"],
+        "source_url": item["source_url"],
+        "source_external_id": item["source_external_id"],
+        "published_at": item["published_at"],
+        "ingestion_date": item["ingestion_date"],
+        "headline": item["headline"],
+        "summary": item["summary"],
+        "raw_text": item["raw_text"],
+        "language": item["language"],
+        "matched_alias": item["matched_alias"],
+        "signal_type": cls["signal_type"],
+        "sentiment": cls["sentiment"],
+        "relevance": cls["relevance"],
+        "relevance_score": None,
+        "is_duplicate": False,
+        "dedupe_key": f'{item["customer_id"]}_{item["source_external_id"]}',
+        "triggers_alert_candidate": cls["triggers_alert_candidate"],
+        "classification_reason": cls["classification_reason"],
+        "llm_summary": cls["llm_summary"],
+    }
+    return supabase.table("news_events").insert(row).execute()
+
+
+def main():
+    items = fetch_ir_items(target_date=TARGET_DATE)
+    print(f"Gefundene Bayer-IR-Meldungen: {len(items)}")
+
+    inserted = 0
+    skipped = 0
+
+    for item in items:
+        if already_exists(item["source_external_id"], item["customer_id"]):
+            skipped += 1
+            continue
+
+        classification = classify_item(item)
+        save_item(item, classification)
+        inserted += 1
+
+        print("Neu klassifiziert:")
+        print(item["headline"])
+        print(classification)
+
+    print(f"Neu geschrieben: {inserted}")
+    print(f"Übersprungen: {skipped}")
+
+
+if __name__ == "__main__":
+    main()
 print("Klassifikation:")
 print(result)
 print("In Supabase geschrieben:")
