@@ -168,7 +168,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-print("Klassifikation:")
-print(result)
-print("In Supabase geschrieben:")
-print(insert_result.data)
