@@ -25,7 +25,8 @@ TICKER_MAP = {
   7: {"customer_name": "BMW", "symbol": "BMW.DE"}, 
   8: {"customer_name": "Volkswagen", "symbol": "VOW3.DE"}, 
   9: {"customer_name": "TUI", "symbol": "TUI1.DE"}, 
-  # 10 Telefonica Deutschland bewusst raus: delisted / kein aktives Kursmonitoring } 
+  # 10 Telefonica Deutschland bewusst raus: delisted / kein aktives Kursmonitoring 
+} 
   
 TARGET_DATE = os.environ.get("PRICE_DATE") 
 # optional, z. B. 2026-04-15 
