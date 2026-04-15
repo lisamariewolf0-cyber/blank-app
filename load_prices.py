@@ -133,7 +133,7 @@ def main():
     symbol = info["symbol"] 
     
     try:     
-      row = build_row(customer_id, symbol, df_two_days) 
+      row = build_row(customer_id, symbol) 
       
       if already_exists(customer_id, row["trading_date"]): 
         skipped += 1 
