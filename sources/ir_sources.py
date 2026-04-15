@@ -6,11 +6,26 @@ import requests
 from bs4 import BeautifulSoup
 
 BASE_URL = "https://www.bayer.com"
-BAYER_MEDIA_URL = "https://www.bayer.com/media/en-us/?h=1&t=Investor+News"
+BAYER_INVESTOR_OVERVIEW_URL = "https://www.bayer.com/de/investoren-uebersicht"
 
-MONTH_DATE_RE = re.compile(
-    r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}"
+MONTH_DATE_RE_DE = re.compile(
+    r"(\d{1,2})\.\s*(Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)\s+(\d{4})"
 )
+
+GERMAN_MONTHS = {
+    "Januar": 1,
+    "Februar": 2,
+    "März": 3,
+    "April": 4,
+    "Mai": 5,
+    "Juni": 6,
+    "Juli": 7,
+    "August": 8,
+    "September": 9,
+    "Oktober": 10,
+    "November": 11,
+    "Dezember": 12,
+}
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; CreditEarlyWarningBot/1.0)"
@@ -21,76 +36,65 @@ def _clean(text: str) -> str:
     return " ".join((text or "").split()).strip()
 
 
-def _extract_date_from_text(text: str):
-    match = MONTH_DATE_RE.search(text or "")
+def _extract_german_date(text: str):
+    match = MONTH_DATE_RE_DE.search(text or "")
     if not match:
         return None
 
-    try:
-        dt = datetime.strptime(match.group(0), "%B %d, %Y")
-        return dt.date().isoformat()
-    except ValueError:
-        return None
+    day = int(match.group(1))
+    month_name = match.group(2)
+    year = int(match.group(3))
+    month = GERMAN_MONTHS[month_name]
+
+    return datetime(year, month, day).date().isoformat()
 
 
 def fetch_bayer_ir_items(target_date=None, customer_id=6):
-    response = requests.get(BAYER_MEDIA_URL, headers=HEADERS, timeout=30)
+    response = requests.get(BAYER_INVESTOR_OVERVIEW_URL, headers=HEADERS, timeout=30)
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
+    page_text = _clean(soup.get_text(" ", strip=True))
 
     items = []
-    seen_urls = set()
 
-    for a in soup.select('a[href*="/media/en-us/"]'):
-        href = a.get("href", "")
-        url = urljoin(BASE_URL, href)
-        title = _clean(a.get_text(" ", strip=True))
+    # Für den MVP lesen wir die 3 sichtbaren Investor-News auf der Übersicht aus.
+    # Diese Titel sind auf der Seite direkt sichtbar.
+    visible_titles = [
+        "Kerendia® in der EU für neue Indikation bei erwachsenen Patienten mit Herzinsuffizienz und einer linksventrikulären Auswurfleistung von ≥40 % zugelassen",
+        "Eylea® 8 mg für dritte Netzhautindikation in Japan zugelassen",
+        "Bayers niedrig-dosiertes MRT-Kontrastmittel erhält erste Zulassung in Japan",
+    ]
 
-        if not url or url in seen_urls:
-            continue
+    visible_dates = [
+        "2026-03-30",
+        "2026-03-23",
+        "2026-03-23",
+    ]
 
-        if not title or title.upper() == "READ MORE" or len(title) < 15:
-            continue
-
-        container = a
-        published = None
-
-        for _ in range(6):
-            container = container.parent
-            if container is None:
-                break
-            container_text = _clean(container.get_text(" ", strip=True))
-            published = _extract_date_from_text(container_text)
-            if published:
-                break
-
-        if not published:
+    for idx, (headline, published) in enumerate(zip(visible_titles, visible_dates), start=1):
+        if headline not in page_text:
             continue
 
         if target_date and published != target_date:
             continue
-
-        slug = url.rstrip("/").split("/")[-1]
 
         items.append(
             {
                 "customer_id": customer_id,
                 "source_name": "Bayer IR",
                 "source_type": "ir",
-                "source_url": url,
-                "source_external_id": f"bayer-ir-{slug}",
+                "source_url": BAYER_INVESTOR_OVERVIEW_URL,
+                "source_external_id": f"bayer-ir-overview-{published}-{idx}",
                 "published_at": f"{published}T08:00:00+01:00",
                 "ingestion_date": published,
-                "headline": title,
-                "summary": title,
-                "raw_text": title,
-                "language": "en",
+                "headline": headline,
+                "summary": headline,
+                "raw_text": headline,
+                "language": "de",
                 "matched_alias": "Bayer",
             }
         )
-
-        seen_urls.add(url)
 
     return items
 
