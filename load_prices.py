@@ -9,7 +9,7 @@ supabase = create_client(
   os.environ["SUPABASE_KEY"], 
 ) 
 
-API_KEY = os.environ["ALPHAVANTAGE_API_KEY] 
+API_KEY = os.environ["ALPHAVANTAGE_API_KEY"] 
 BASE_URL = "https://www.alphavantage.co/query"
 
 # Startmapping fuer den MVP. 
