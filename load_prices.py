@@ -55,15 +55,17 @@ def already_exists(customer_id: int, trading_date: str) -> bool:
   return len(resp.data or []) > 0 
 
 def fetch_latest_two_days(symbol: str) -> pd.DataFrame:
-    # 10 Tage Puffer, damit Feiertage/Wochenenden kein Problem sind
-    df = yf.download(symbol, period="10d", interval="1d", auto_adjust=False, progress=False)
+    try:
+        ticker = yf.Ticker(symbol)
+        df = ticker.history(period="10d", interval="1d", auto_adjust=False, timeout=30)
+    except Exception:
+        return pd.DataFrame()
 
     if df is None or df.empty:
         return pd.DataFrame()
 
     df = df.reset_index()
 
-    # yfinance liefert je nach Version unterschiedliche Spaltennamen
     col_map = {}
     for col in df.columns:
         if str(col).lower() == "date":
@@ -94,7 +96,7 @@ def fetch_latest_two_days(symbol: str) -> pd.DataFrame:
     if len(df) < 2:
         return pd.DataFrame()
 
-    return df.tail(2).copy() 
+    return df.tail(2).copy()
 
 def build_row(customer_id: int, symbol: str, df_two_days: pd.DataFrame): 
   prev_row = df_two_days.iloc[0] 
