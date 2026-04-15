@@ -54,46 +54,47 @@ def already_exists(customer_id: int, trading_date: str) -> bool:
   ) 
   return len(resp.data or []) > 0 
 
-def fetch_latest_two_days(symbol: str) -> pd.DataFrame: 
-  # 10 Tage Puffer, damit Feiertage/Wochenenden kein Problem sind 
-  df = yf.download(symbol, period="10d", interval="1d", auto_adjust=False, progress=False) 
-    
-  if df is None or df.empty: 
-   return pd.DataFrame() 
-      
-  df = df.reset_index() 
-  # yfinance liefert je nach Version unterschiedliche Spaltennamen 
-  col_map = {} 
-    for col in df.columns: 
-     if str(col).lower() == "date": 
-       col_map[col] = "Date" 
-     elif str(col).lower() == "open": 
-       col_map[col] = "Open" 
-     elif str(col).lower() == "high": 
-       col_map[col] = "High" 
-     elif str(col).lower() == "low": 
-       col_map[col] = "Low" 
-     elif str(col).lower() == "close": 
-       col_map[col] = "Close" 
-     elif str(col).lower() == "volume": 
-       col_map[col] = "Volume" 
-        
-  df = df.rename(columns=col_map) 
-  
-  required = {"Date", "Open", "High", "Low", "Close"} 
-  if not required.issubset(set(df.columns)): 
-    return pd.DataFrame() 
-  
-  df = df.sort_values("Date") 
-  
-  if TARGET_DATE: 
-    df["trade_date_str"] = pd.to_datetime(df["Date"]).dt.date.astype(str) 
-    df = df[df["trade_date_str"] <= TARGET_DATE] 
-    
-  if len(df) < 2: 
-    return pd.DataFrame() 
-    
-  return df.tail(2).copy() 
+def fetch_latest_two_days(symbol: str) -> pd.DataFrame:
+    # 10 Tage Puffer, damit Feiertage/Wochenenden kein Problem sind
+    df = yf.download(symbol, period="10d", interval="1d", auto_adjust=False, progress=False)
+
+    if df is None or df.empty:
+        return pd.DataFrame()
+
+    df = df.reset_index()
+
+    # yfinance liefert je nach Version unterschiedliche Spaltennamen
+    col_map = {}
+    for col in df.columns:
+        if str(col).lower() == "date":
+            col_map[col] = "Date"
+        elif str(col).lower() == "open":
+            col_map[col] = "Open"
+        elif str(col).lower() == "high":
+            col_map[col] = "High"
+        elif str(col).lower() == "low":
+            col_map[col] = "Low"
+        elif str(col).lower() == "close":
+            col_map[col] = "Close"
+        elif str(col).lower() == "volume":
+            col_map[col] = "Volume"
+
+    df = df.rename(columns=col_map)
+
+    required = {"Date", "Open", "High", "Low", "Close"}
+    if not required.issubset(set(df.columns)):
+        return pd.DataFrame()
+
+    df = df.sort_values("Date")
+
+    if TARGET_DATE:
+        df["trade_date_str"] = pd.to_datetime(df["Date"]).dt.date.astype(str)
+        df = df[df["trade_date_str"] <= TARGET_DATE]
+
+    if len(df) < 2:
+        return pd.DataFrame()
+
+    return df.tail(2).copy() 
 
 def build_row(customer_id: int, symbol: str, df_two_days: pd.DataFrame): 
   prev_row = df_two_days.iloc[0] 
