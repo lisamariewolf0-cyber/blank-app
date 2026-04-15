@@ -3,7 +3,7 @@ import json
 
 from openai import OpenAI
 from supabase import create_client
-from sources.ir_sources import fetch_ir_items
+from sources.eqs_symrise import fetch_symrise_eqs_items
 
 client = OpenAI(
     api_key=os.environ["GROQ_API_KEY"],
@@ -143,8 +143,8 @@ def save_item(item: dict, cls: dict):
 
 
 def main():
-    items = fetch_ir_items(target_date=TARGET_DATE)
-    print(f"Gefundene Bayer-IR-Meldungen: {len(items)}")
+    items = fetch_symrise_eqs_items(target_date=TARGET_DATE)
+    print(f"Gefundene Symrise-EQS-Meldungen: {len(items)}")
 
     inserted = 0
     skipped = 0
