@@ -6,7 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 
 BASE_URL = "https://www.bayer.com"
-INVESTOR_NEWS_URL = "https://www.bayer.com/en/investors/investor-news"
+BAYER_MEDIA_URL = "https://www.bayer.com/media/en-us/?h=1&t=Investor+News"
 
 MONTH_DATE_RE = re.compile(
     r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}"
@@ -34,7 +34,7 @@ def _extract_date_from_text(text: str):
 
 
 def fetch_bayer_ir_items(target_date=None, customer_id=6):
-    response = requests.get(INVESTOR_NEWS_URL, headers=HEADERS, timeout=30)
+    response = requests.get(BAYER_MEDIA_URL, headers=HEADERS, timeout=30)
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
@@ -42,21 +42,21 @@ def fetch_bayer_ir_items(target_date=None, customer_id=6):
     items = []
     seen_urls = set()
 
-    # Investor-News-Detailseiten laufen typischerweise über /media/en-us/...
     for a in soup.select('a[href*="/media/en-us/"]'):
+        href = a.get("href", "")
+        url = urljoin(BASE_URL, href)
         title = _clean(a.get_text(" ", strip=True))
 
-        if not title or title.upper() == "READ MORE" or len(title) < 20:
-            continue
-
-        url = urljoin(BASE_URL, a.get("href", ""))
         if not url or url in seen_urls:
             continue
 
-        # Wir suchen das Datum im umgebenden Card-/Container-Text
+        if not title or title.upper() == "READ MORE" or len(title) < 15:
+            continue
+
         container = a
-        container_text = ""
-        for _ in range(5):
+        published = None
+
+        for _ in range(6):
             container = container.parent
             if container is None:
                 break
@@ -64,8 +64,6 @@ def fetch_bayer_ir_items(target_date=None, customer_id=6):
             published = _extract_date_from_text(container_text)
             if published:
                 break
-        else:
-            published = None
 
         if not published:
             continue
@@ -73,7 +71,7 @@ def fetch_bayer_ir_items(target_date=None, customer_id=6):
         if target_date and published != target_date:
             continue
 
-        source_external_id = url.rstrip("/").split("/")[-1]
+        slug = url.rstrip("/").split("/")[-1]
 
         items.append(
             {
@@ -81,7 +79,7 @@ def fetch_bayer_ir_items(target_date=None, customer_id=6):
                 "source_name": "Bayer IR",
                 "source_type": "ir",
                 "source_url": url,
-                "source_external_id": f"bayer-ir-{source_external_id}",
+                "source_external_id": f"bayer-ir-{slug}",
                 "published_at": f"{published}T08:00:00+01:00",
                 "ingestion_date": published,
                 "headline": title,
