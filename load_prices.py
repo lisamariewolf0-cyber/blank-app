@@ -2,8 +2,8 @@ import os
 from datetime import datetime 
 
 import pandas as pd 
-import yfinance as yf from supabase 
-import create_client 
+import yfinance as yf 
+from supabase import create_client 
 
 supabase = create_client( 
   os.environ["SUPABASE_URL"], 
