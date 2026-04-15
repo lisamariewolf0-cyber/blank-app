@@ -1,0 +1,30 @@
+[
+  {
+    "customer_id": 6,
+    "source_name": "",
+    "source_type": "news_manual",
+    "source_url": "",
+    "source_external_id": "",
+    "published_at": "YYYY-MM-DDTHH:MM:SS+01:00",
+    "ingestion_date": "YYYY-MM-DD",
+    "headline": "",
+    "summary": "",
+    "raw_text": "",
+    "language": "de",
+    "matched_alias": ""
+  },
+  {
+    "customer_id": 7,
+    "source_name": "",
+    "source_type": "news_manual",
+    "source_url": "",
+    "source_external_id": "",
+    "published_at": "YYYY-MM-DDTHH:MM:SS+01:00",
+    "ingestion_date": "YYYY-MM-DD",
+    "headline": "",
+    "summary": "",
+    "raw_text": "",
+    "language": "de",
+    "matched_alias": ""
+  }
+]
