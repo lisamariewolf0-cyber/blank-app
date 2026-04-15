@@ -15,18 +15,17 @@ BASE_URL = "https://www.alphavantage.co/query"
 # Startmapping fuer den MVP. 
 # Wenn ein Symbol leer zurueckkommt, passen wir es morgen gezielt an. 
 
-TICKER_MAP = { 
-  1: {"customer_name": "MTU", "symbol": "MTX.DE"}, 
-  2: {"customer_name": "Symrise", "symbol": "SY1.DE"}, 
-  3: {"customer_name": "Henkel", "symbol": "HEN3.DE"}, 
-  4: {"customer_name": "AMAG", "symbol": "AMAG.VI"}, 
-  5: {"customer_name": "BASF", "symbol": "BAS.DE"}, 
-  6: {"customer_name": "Bayer", "symbol": "BAYN.DE"}, 
-  7: {"customer_name": "BMW", "symbol": "BMW.DE"}, 
-  8: {"customer_name": "Volkswagen", "symbol": "VOW3.DE"}, 
-  9: {"customer_name": "TUI", "symbol": "TUI1.DE"}, 
-  # 10 Telefonica Deutschland bewusst raus: delisted / kein aktives Kursmonitoring 
-} 
+TICKER_MAP = {
+    1: {"customer_name": "MTU Aero Engines"},
+    2: {"customer_name": "Symrise"},
+    3: {"customer_name": "Henkel"},
+    4: {"customer_name": "AMAG Austria Metall"},
+    5: {"customer_name": "BASF"},
+    6: {"customer_name": "Bayer"},
+    7: {"customer_name": "BMW"},
+    8: {"customer_name": "Volkswagen"},
+    9: {"customer_name": "TUI"},
+}
   
 TARGET_DATE = os.environ.get("PRICE_DATE") 
 # optional, z. B. 2026-04-15 
