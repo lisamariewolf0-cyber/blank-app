@@ -3,6 +3,7 @@ import json
 
 from openai import OpenAI
 from supabase import create_client
+from sources.ir_sources import fetch_ir_items
 
 client = OpenAI(
     api_key=os.environ["GROQ_API_KEY"],
