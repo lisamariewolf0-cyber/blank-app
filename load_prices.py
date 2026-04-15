@@ -53,7 +53,51 @@ def already_exists(customer_id: int, trading_date: str) -> bool:
     .execute() 
   ) 
   return len(resp.data or []) > 0 
-  
+
+def search_symbol(keyword: str):
+    params = {
+        "function": "SYMBOL_SEARCH",
+        "keywords": keyword,
+        "apikey": API_KEY,
+    }
+
+    response = requests.get(BASE_URL, params=params, timeout=30)
+    response.raise_for_status()
+    data = response.json()
+
+    if "Note" in data:
+        raise RuntimeError(f"Alpha Vantage Limit erreicht: {data['Note']}")
+
+    matches = data.get("bestMatches", [])
+    if not matches:
+        raise RuntimeError(f"Keine Symbolsuche-Treffer fuer {keyword}")
+
+    return matches
+
+def resolve_symbol(company_name: str):
+    matches = search_symbol(company_name)
+
+    preferred_regions = ["XETRA", "Frankfurt"]
+
+    for region in preferred_regions:
+        for match in matches:
+            match_region = str(match.get("4. region", "")).strip()
+            symbol = str(match.get("1. symbol", "")).strip()
+            name = str(match.get("2. name", "")).strip()
+
+            if match_region == region and symbol:
+                return symbol, name, match_region
+
+    # Fallback: erster Treffer mit Symbol
+    for match in matches:
+        symbol = str(match.get("1. symbol", "")).strip()
+        name = str(match.get("2. name", "")).strip()
+        region = str(match.get("4. region", "")).strip()
+        if symbol:
+            return symbol, name, region
+
+    raise RuntimeError(f"Kein verwendbares Symbol fuer {company_name}")
+ 
 def fetch_daily_series(symbol: str): 
     params = { 
         "function": "TIME_SERIES_DAILY_ADJUSTED", 
