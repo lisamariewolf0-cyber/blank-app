@@ -172,22 +172,26 @@ def main():
   skipped = 0 
   failed = [] 
   
-  for customer_id, info in TICKER_MAP.items(): 
-    symbol = info["symbol"] 
-    
-    try:     
-      row = build_row(customer_id, symbol) 
-      
-      if already_exists(customer_id, row["trading_date"]): 
-        skipped += 1 
-        continue 
-        
-      supabase.table("price_snapshots").insert(row).execute() 
-      inserted += 1 
-      print(f"Eingefuegt: {info['customer_name']} | {symbol} | {row['trading_date']} | {row['pct_change']} %") 
-    
-    except Exception as e: 
-      failed.append((customer_id, info["customer_name"], symbol, str(e))) 
+  for customer_id, info in TICKER_MAP.items():
+       try:
+           company_name = info["customer_name"]
+           symbol, resolved_name, resolved_region = resolve_symbol(company_name)
+
+           row = build_row(customer_id, symbol)
+
+           if already_exists(customer_id, row["trading_date"]):
+               skipped += 1
+               continue
+
+           supabase.table("price_snapshots").insert(row).execute()
+           inserted += 1
+           print(
+               f"Eingefuegt: {info['customer_name']} | "
+               f"{symbol} ({resolved_region}) | {row['trading_date']} | {row['pct_change']} %"
+           )
+
+       except Exception as e:
+           failed.append((customer_id, info["customer_name"], str(e))) 
       
   print(f"\nNeu geschrieben: {inserted}") 
   print(f"Uebersprungen: {skipped}") 
