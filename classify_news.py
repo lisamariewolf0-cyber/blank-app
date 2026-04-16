@@ -3,7 +3,7 @@ import json
 
 from openai import OpenAI
 from supabase import create_client
-from sources.eqs_symrise import fetch_symrise_eqs_items
+from sources.google_news_fetch import fetch_all_customers_news
 
 client = OpenAI(
     api_key=os.environ["GROQ_API_KEY"],
