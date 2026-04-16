@@ -143,8 +143,8 @@ def save_item(item: dict, cls: dict):
 
 
 def main():
-    items = fetch_symrise_eqs_items(target_date=TARGET_DATE)
-    print(f"Gefundene Symrise-EQS-Meldungen: {len(items)}")
+    news_items = fetch_all_customers_news(supabase, target_date=TARGET_DATE)
+    print(f"NewsAPI-Meldungen gesamt: {len(news_items)}")
 
     inserted = 0
     skipped = 0
