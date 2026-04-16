@@ -15,16 +15,8 @@ BASE_URL = "https://www.alphavantage.co/query"
 # Startmapping fuer den MVP. 
 # Wenn ein Symbol leer zurueckkommt, passen wir es morgen gezielt an. 
 
-TICKER_MAP = {
-    1: {"customer_name": "MTU Aero Engines"},
-    2: {"customer_name": "Symrise"},
-    3: {"customer_name": "Henkel"},
-    4: {"customer_name": "AMAG Austria Metall"},
-    5: {"customer_name": "BASF"},
-    6: {"customer_name": "Bayer"},
-    7: {"customer_name": "BMW"},
-    8: {"customer_name": "Volkswagen"},
-    9: {"customer_name": "TUI"},
+CANDIDATE_SYMBOLS = {
+    7: {"customer_name": "BMW", "symbols": ["BMW.DEX", "BMW3.FRK"]},
 }
   
 TARGET_DATE = os.environ.get("PRICE_DATE") 
@@ -166,40 +158,50 @@ def build_row(customer_id: int, symbol: str):
         "price_alert_level": level, 
         "source_name": f"Alpha Vantage ({symbol})",
     } 
-    
-def main(): 
-  inserted = 0 
-  skipped = 0 
-  failed = [] 
-  
-  for customer_id, info in TICKER_MAP.items():
-       try:
-           company_name = info["customer_name"]
-           symbol, resolved_name, resolved_region = resolve_symbol(company_name)
 
-           row = build_row(customer_id, symbol)
+def build_row_from_candidates(customer_id: int, symbols: list[str]):
+    errors = []
 
-           if already_exists(customer_id, row["trading_date"]):
-               skipped += 1
-               continue
+    for symbol in symbols:
+        try:
+            row = build_row(customer_id, symbol)
+            return row, symbol
+        except Exception as e:
+            errors.append(f"{symbol}: {e}")
 
-           supabase.table("price_snapshots").insert(row).execute()
-           inserted += 1
-           print(
-               f"Eingefuegt: {info['customer_name']} | "
-               f"{symbol} ({resolved_region}) | {row['trading_date']} | {row['pct_change']} %"
-           )
+    raise RuntimeError(" | ".join(errors))
 
-       except Exception as e:
-           failed.append((customer_id, info["customer_name"], str(e))) 
-      
-  print(f"\nNeu geschrieben: {inserted}") 
-  print(f"Uebersprungen: {skipped}") 
-  
-  if failed: 
-    print("\nFehler / keine Daten:") 
-    for item in failed: 
-      print(item) 
-      
-if __name__ == "__main__": 
-  main()
+def main():
+    inserted = 0
+    skipped = 0
+    failed = []
+
+    for customer_id, info in CANDIDATE_SYMBOLS.items():
+        try:
+            row, used_symbol = build_row_from_candidates(customer_id, info["symbols"])
+
+            if already_exists(customer_id, row["trading_date"]):
+                skipped += 1
+                continue
+
+            supabase.table("price_snapshots").insert(row).execute()
+            inserted += 1
+            print(
+                f"Eingefuegt: {info['customer_name']} | "
+                f"{used_symbol} | {row['trading_date']} | {row['pct_change']} %"
+            )
+
+        except Exception as e:
+            failed.append((customer_id, info["customer_name"], str(e)))
+
+    print(f"\nNeu geschrieben: {inserted}")
+    print(f"Uebersprungen: {skipped}")
+
+    if failed:
+        print("\nFehler / keine Daten:")
+        for item in failed:
+            print(item)
+
+
+if __name__ == "__main__":
+    main()
