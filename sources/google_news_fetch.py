@@ -1,23 +1,17 @@
 import os
 import hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from newsapi import NewsApiClient
 
 newsapi = NewsApiClient(api_key=os.environ["NEWSAPI_KEY"])
 
 def fetch_news_for_customer(customer: dict, target_date: str = None) -> list[dict]:
-    """
-    Holt aktuelle News für einen Kunden.
-    customer = {"id": 1, "name": "Symrise AG", "ticker": "SY1.DE", "isin": "..."}
-    Gibt eine Liste von items zurück, die exakt dem Format deiner Pipeline entsprechen.
-    """
-    # Suchanfrage: Firmenname (präziser als Ticker für News)
     query = customer["name"]
-    
+
     try:
         response = newsapi.get_everything(
             q=query,
-            language="de",          # deutsche Artikel zuerst
+            language="de",
             sort_by="publishedAt",
             page_size=10,
         )
@@ -27,24 +21,20 @@ def fetch_news_for_customer(customer: dict, target_date: str = None) -> list[dic
 
     items = []
     today = target_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=3)).strftime("%Y-%m-%d")
 
     for article in response.get("articles", []):
-        # Eindeutige ID aus URL erzeugen (wie deine source_external_id)
         url = article.get("url", "")
         external_id = hashlib.md5(url.encode()).hexdigest()
 
-        # Nur Artikel von heute (oder target_date)
         published_raw = article.get("publishedAt", "")
-        from datetime import datetime, timezone, timedelta
-
-        cutoff = (datetime.now(timezone.utc) - timedelta(days=3)).strftime("%Y-%m-%d")
-        article_date = published_raw[:10]  # nur "YYYY-MM-DD" nehmen
+        article_date = published_raw[:10]
         if article_date < cutoff:
-           continue
+            continue
 
-        headline = article.get("title") or ""
+        headline    = article.get("title") or ""
         description = article.get("description") or ""
-        content = article.get("content") or description
+        content     = article.get("content") or description
 
         items.append({
             "customer_id":        customer["id"],
@@ -65,9 +55,6 @@ def fetch_news_for_customer(customer: dict, target_date: str = None) -> list[dic
 
 
 def fetch_all_customers_news(supabase_client, target_date: str = None) -> list[dict]:
-    """
-    Lädt alle Kunden aus Supabase und holt News für jeden.
-    """
     response = supabase_client.table("customers").select("id, name, ticker, isin").execute()
     customers = response.data
 
