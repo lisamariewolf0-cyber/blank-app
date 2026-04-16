@@ -35,8 +35,12 @@ def fetch_news_for_customer(customer: dict, target_date: str = None) -> list[dic
 
         # Nur Artikel von heute (oder target_date)
         published_raw = article.get("publishedAt", "")
-        if not published_raw.startswith(today):
-            continue
+        from datetime import datetime, timezone, timedelta
+
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=3)).strftime("%Y-%m-%d")
+        article_date = published_raw[:10]  # nur "YYYY-MM-DD" nehmen
+        if article_date < cutoff:
+           continue
 
         headline = article.get("title") or ""
         description = article.get("description") or ""
