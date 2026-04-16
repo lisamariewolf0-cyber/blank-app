@@ -1,4 +1,3 @@
-# fetch_market_data.py
 import os
 from datetime import datetime, timezone
 import yfinance as yf
@@ -11,11 +10,9 @@ supabase = create_client(
 
 TARGET_DATE = os.environ.get("INGEST_DATE") or datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-# Schwellenwerte für price_alert_level
 ALERT_THRESHOLDS = {
-    "critical": 5.0,   # >= 5% Bewegung → critical
-    "warning":  2.0,   # >= 2% Bewegung → warning
-    # sonst          → none
+    "critical": 5.0,
+    "warning":  2.0,
 }
 
 def get_alert_level(pct_change: float) -> tuple[bool, str]:
@@ -38,18 +35,24 @@ def already_exists(customer_id: int, trading_date: str) -> bool:
     return len(resp.data or []) > 0
 
 def fetch_and_store_prices(target_date: str = TARGET_DATE):
-    # Alle Kunden aus Supabase laden
-    customers = supabase.table("customers").select("id, name, ticker").execute().data
+    customers = (
+        supabase.table("customers")
+        .select("id, customer_name, ticker")
+        .eq("is_active", True)
+        .eq("track_price", True)
+        .execute()
+        .data
+    )
     print(f"Verarbeite {len(customers)} Kunden für {target_date} ...")
 
     inserted = 0
-    skipped = 0
-    errors = 0
+    skipped  = 0
+    errors   = 0
 
     for customer in customers:
         customer_id = customer["id"]
         ticker      = customer["ticker"]
-        name        = customer["name"]
+        name        = customer["customer_name"]
 
         if already_exists(customer_id, target_date):
             print(f"  SKIP {name} ({ticker}) – bereits vorhanden")
@@ -58,8 +61,7 @@ def fetch_and_store_prices(target_date: str = TARGET_DATE):
 
         try:
             stock = yf.Ticker(ticker)
-            # 5 Handelstage holen → letzter = heute, vorletzter = prev_close
-            hist = stock.history(period="5d")
+            hist  = stock.history(period="5d")
 
             if hist.empty or len(hist) < 1:
                 print(f"  WARN {name} ({ticker}) – keine Daten von yfinance")
@@ -86,20 +88,20 @@ def fetch_and_store_prices(target_date: str = TARGET_DATE):
             is_alert, alert_level = get_alert_level(pct_change) if pct_change is not None else (False, "none")
 
             row = {
-                "customer_id":            customer_id,
-                "trading_date":           target_date,
-                "currency":               "EUR",
-                "open_price":             open_price,
-                "high_price":             high_price,
-                "low_price":              low_price,
-                "close_price":            close_price,
-                "prev_close_price":       prev_close_price,
-                "abs_change":             abs_change,
-                "pct_change":             pct_change,
-                "volume":                 volume,
+                "customer_id":              customer_id,
+                "trading_date":             target_date,
+                "currency":                 "EUR",
+                "open_price":               open_price,
+                "high_price":               high_price,
+                "low_price":                low_price,
+                "close_price":              close_price,
+                "prev_close_price":         prev_close_price,
+                "abs_change":               abs_change,
+                "pct_change":               pct_change,
+                "volume":                   volume,
                 "is_price_alert_candidate": is_alert,
-                "price_alert_level":      alert_level,
-                "source_name":            "yahoo_finance",
+                "price_alert_level":        alert_level,
+                "source_name":              "yahoo_finance",
             }
 
             supabase.table("price_snapshots").insert(row).execute()
