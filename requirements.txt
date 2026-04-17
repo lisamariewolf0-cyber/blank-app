@@ -1,7 +1,5 @@
-streamlit
 supabase
-pandas
 openai
-requests
-beautifulsoup4
 yfinance
+newsapi-python
+feedparser
