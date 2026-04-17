@@ -24,18 +24,14 @@ jobs:
       - name: Abhängigkeiten installieren
         run: pip install -r requirements.txt
 
-      - name: Secrets prüfen
-        env:
-          SUPABASE_URL:  ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY:  ${{ secrets.SUPABASE_KEY }}
-          GROQ_API_KEY:  ${{ secrets.GROQ_API_KEY }}
-          NEWSAPI_KEY:   ${{ secrets.NEWSAPI_KEY }}
+      - name: Netzwerk testen
         run: |
-          echo "SUPABASE_URL gesetzt: $( [ -n "$SUPABASE_URL" ] && echo JA || echo NEIN )"
-          echo "SUPABASE_KEY gesetzt: $( [ -n "$SUPABASE_KEY" ] && echo JA || echo NEIN )"
-          echo "GROQ_API_KEY gesetzt: $( [ -n "$GROQ_API_KEY" ] && echo JA || echo NEIN )"
-          echo "NEWSAPI_KEY gesetzt:  $( [ -n "$NEWSAPI_KEY" ] && echo JA || echo NEIN )"
-          python -c "import httpx; r = httpx.get('https://api.groq.com'); print('Groq erreichbar:', r.status_code)"
+          echo "=== DNS Test ==="
+          nslookup api.groq.com || echo "DNS fehlgeschlagen"
+          echo "=== Ping Test ==="
+          curl -v --max-time 10 https://api.groq.com || echo "Groq nicht erreichbar"
+          echo "=== Supabase Test ==="
+          curl -v --max-time 10 ${{ secrets.SUPABASE_URL }} || echo "Supabase nicht erreichbar"
 
       - name: Pipeline ausführen
         env:
