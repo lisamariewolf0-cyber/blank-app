@@ -1,0 +1,30 @@
+name: Daily Pipeline
+
+on:
+  schedule:
+    - cron: '30 6 * * 1-5'  # Mo-Fr um 07:30 Uhr deutsche Zeit
+  workflow_dispatch:          # manueller Start per Knopfdruck möglich
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Abhängigkeiten installieren
+        run: pip install -r requirements.txt
+
+      - name: Pipeline ausführen
+        env:
+          SUPABASE_URL:  ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY:  ${{ secrets.SUPABASE_KEY }}
+          GROQ_API_KEY:  ${{ secrets.GROQ_API_KEY }}
+          NEWSAPI_KEY:   ${{ secrets.NEWSAPI_KEY }}
+        run: python run_pipeline.py
