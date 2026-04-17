@@ -24,14 +24,18 @@ jobs:
       - name: Abhängigkeiten installieren
         run: pip install -r requirements.txt
 
-      - name: Netzwerk testen
+      - name: Netzwerk und Secrets prüfen
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         run: |
-          echo "=== DNS Test ==="
-          nslookup api.groq.com || echo "DNS fehlgeschlagen"
-          echo "=== Ping Test ==="
-          curl -v --max-time 10 https://api.groq.com || echo "Groq nicht erreichbar"
-          echo "=== Supabase Test ==="
-          curl -v --max-time 10 ${{ secrets.SUPABASE_URL }} || echo "Supabase nicht erreichbar"
+          echo "=== DNS Grundtest ==="
+          nslookup google.com
+          echo "=== Supabase URL Länge ==="
+          echo ${#SUPABASE_URL} Zeichen
+          echo "=== Supabase URL Prefix ==="
+          echo ${SUPABASE_URL:0:30}
+          echo "=== Supabase erreichbar? ==="
+          curl -v --max-time 10 "$SUPABASE_URL" || echo "FEHLER"
 
       - name: Pipeline ausführen
         env:
