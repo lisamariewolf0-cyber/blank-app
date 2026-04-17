@@ -1,5 +1,6 @@
 import os
 import json
+import time
 
 from openai import OpenAI
 from supabase import create_client
@@ -52,55 +53,65 @@ Volltext: {item["raw_text"]}
     ]
 
 
-def classify_item(item: dict) -> dict:
-    response = client.chat.completions.create(
-        model="openai/gpt-oss-20b",
-        messages=classification_messages(item),
-        response_format={
-            "type": "json_schema",
-            "json_schema": {
-                "name": "news_classification",
-                "strict": True,
-                "schema": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "properties": {
-                        "signal_type": {
-                            "type": "string",
-                            "enum": [
-                                "negative_press",
-                                "management_change",
-                                "profit_warning",
-                                "price_related_news",
-                                "other",
+def classify_item(item: dict, retries: int = 3) -> dict:
+    for attempt in range(retries):
+        try:
+            response = client.chat.completions.create(
+                model="openai/gpt-oss-20b",
+                messages=classification_messages(item),
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "news_classification",
+                        "strict": True,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "properties": {
+                                "signal_type": {
+                                    "type": "string",
+                                    "enum": [
+                                        "negative_press",
+                                        "management_change",
+                                        "profit_warning",
+                                        "price_related_news",
+                                        "other",
+                                    ],
+                                },
+                                "sentiment": {
+                                    "type": "string",
+                                    "enum": ["negative", "neutral", "positive"],
+                                },
+                                "relevance": {
+                                    "type": "string",
+                                    "enum": ["high", "medium", "low"],
+                                },
+                                "triggers_alert_candidate": {"type": "boolean"},
+                                "classification_reason": {"type": "string"},
+                                "llm_summary": {"type": "string"},
+                            },
+                            "required": [
+                                "signal_type",
+                                "sentiment",
+                                "relevance",
+                                "triggers_alert_candidate",
+                                "classification_reason",
+                                "llm_summary",
                             ],
                         },
-                        "sentiment": {
-                            "type": "string",
-                            "enum": ["negative", "neutral", "positive"],
-                        },
-                        "relevance": {
-                            "type": "string",
-                            "enum": ["high", "medium", "low"],
-                        },
-                        "triggers_alert_candidate": {"type": "boolean"},
-                        "classification_reason": {"type": "string"},
-                        "llm_summary": {"type": "string"},
                     },
-                    "required": [
-                        "signal_type",
-                        "sentiment",
-                        "relevance",
-                        "triggers_alert_candidate",
-                        "classification_reason",
-                        "llm_summary",
-                    ],
                 },
-            },
-        },
-    )
+            )
+            return json.loads(response.choices[0].message.content)
 
-    return json.loads(response.choices[0].message.content)
+        except Exception as e:
+            wait = 2 ** attempt  # 1s, 2s, 4s
+            print(f"  Versuch {attempt + 1}/{retries} fehlgeschlagen: {e}")
+            if attempt < retries - 1:
+                print(f"  Warte {wait}s ...")
+                time.sleep(wait)
+            else:
+                raise
 
 
 def already_exists(source_external_id: str, customer_id: int) -> bool:
@@ -117,54 +128,26 @@ def already_exists(source_external_id: str, customer_id: int) -> bool:
 
 def save_item(item: dict, cls: dict):
     row = {
-        "customer_id": item["customer_id"],
-        "source_name": item["source_name"],
-        "source_type": item["source_type"],
-        "source_url": item["source_url"],
-        "source_external_id": item["source_external_id"],
-        "published_at": item["published_at"],
-        "ingestion_date": item["ingestion_date"],
-        "headline": item["headline"],
-        "summary": item["summary"],
-        "raw_text": item["raw_text"],
-        "language": item["language"],
-        "matched_alias": item["matched_alias"],
-        "signal_type": cls["signal_type"],
-        "sentiment": cls["sentiment"],
-        "relevance": cls["relevance"],
-        "relevance_score": None,
-        "is_duplicate": False,
-        "dedupe_key": f'{item["customer_id"]}_{item["source_external_id"]}',
+        "customer_id":            item["customer_id"],
+        "source_name":            item["source_name"],
+        "source_type":            item["source_type"],
+        "source_url":             item["source_url"],
+        "source_external_id":     item["source_external_id"],
+        "published_at":           item["published_at"],
+        "ingestion_date":         item["ingestion_date"],
+        "headline":               item["headline"],
+        "summary":                item["summary"],
+        "raw_text":               item["raw_text"],
+        "language":               item["language"],
+        "matched_alias":          item["matched_alias"],
+        "signal_type":            cls["signal_type"],
+        "sentiment":              cls["sentiment"],
+        "relevance":              cls["relevance"],
+        "relevance_score":        None,
+        "is_duplicate":           False,
+        "dedupe_key":             f'{item["customer_id"]}_{item["source_external_id"]}',
         "triggers_alert_candidate": cls["triggers_alert_candidate"],
-        "classification_reason": cls["classification_reason"],
-        "llm_summary": cls["llm_summary"],
+        "classification_reason":  cls["classification_reason"],
+        "llm_summary":            cls["llm_summary"],
     }
     return supabase.table("news_events").insert(row).execute()
-
-
-def main():
-    news_items = fetch_all_customers_news(supabase, target_date=TARGET_DATE)
-    print(f"NewsAPI-Meldungen gesamt: {len(news_items)}")
-
-    inserted = 0
-    skipped = 0
-
-    for item in items:
-        if already_exists(item["source_external_id"], item["customer_id"]):
-            skipped += 1
-            continue
-
-        classification = classify_item(item)
-        save_item(item, classification)
-        inserted += 1
-
-        print("Neu klassifiziert:")
-        print(item["headline"])
-        print(classification)
-
-    print(f"Neu geschrieben: {inserted}")
-    print(f"Übersprungen: {skipped}")
-
-
-if __name__ == "__main__":
-    main()
