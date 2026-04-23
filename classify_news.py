@@ -2,12 +2,11 @@ import os
 import json
 import time
 
-from openai import OpenAI
+import google.generativeai as genai
 from supabase import create_client
 
-client = OpenAI(
-    api_key=os.environ["OPENAI_API_KEY"],
-)
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 supabase = create_client(
     os.environ["SUPABASE_URL"],
@@ -16,23 +15,15 @@ supabase = create_client(
 
 TARGET_DATE = os.environ.get("INGEST_DATE")
 
-def classification_messages(item: dict):
-    return [
-        {
-            "role": "system",
-            "content": (
-                "Du klassifizierst externe Unternehmensmeldungen für ein Frühwarnsystem "
-                "für Kreditanalysten. Gib nur JSON zurück, exakt passend zum Schema."
-            ),
-        },
-        {
-            "role": "user",
-            "content": f"""
+def classification_prompt(item: dict) -> str:
+    return f"""Du klassifizierst externe Unternehmensmeldungen für ein Frühwarnsystem für Kreditanalysten.
+Gib NUR ein JSON-Objekt zurück, keine Erklärungen, keine Markdown-Backticks.
+
 Regeln:
-- "profit_warning" bei Gewinnwarnung, Guidance-Senkung oder ähnlicher finanzieller Verschlechterung
+- "profit_warning" bei Gewinnwarnung, Guidance-Senkung oder finanzieller Verschlechterung
 - "management_change" bei relevantem Wechsel im Top-Management
 - "negative_press" bei negativer Berichterstattung mit möglicher Kreditrelevanz
-- "price_related_news" nur wenn die Nachricht selbst direkt kursbezogen ist
+- "price_related_news" nur wenn die Nachricht direkt kursbezogen ist
 - sonst "other"
 
 Relevanz:
@@ -46,61 +37,32 @@ Quelle: {item["source_name"]}
 Titel: {item["headline"]}
 Kurztext: {item["summary"]}
 Volltext: {item["raw_text"]}
-""",
-        },
-    ]
+
+Antworte ausschließlich mit diesem JSON-Schema:
+{{
+  "signal_type": "negative_press|management_change|profit_warning|price_related_news|other",
+  "sentiment": "negative|neutral|positive",
+  "relevance": "high|medium|low",
+  "triggers_alert_candidate": true|false,
+  "classification_reason": "kurze Begründung",
+  "llm_summary": "Kurzzusammenfassung der Meldung"
+}}"""
 
 
 def classify_item(item: dict, retries: int = 3) -> dict:
     for attempt in range(retries):
         try:
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=classification_messages(item),
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "news_classification",
-                        "strict": True,
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": False,
-                            "properties": {
-                                "signal_type": {
-                                    "type": "string",
-                                    "enum": [
-                                        "negative_press",
-                                        "management_change",
-                                        "profit_warning",
-                                        "price_related_news",
-                                        "other",
-                                    ],
-                                },
-                                "sentiment": {
-                                    "type": "string",
-                                    "enum": ["negative", "neutral", "positive"],
-                                },
-                                "relevance": {
-                                    "type": "string",
-                                    "enum": ["high", "medium", "low"],
-                                },
-                                "triggers_alert_candidate": {"type": "boolean"},
-                                "classification_reason": {"type": "string"},
-                                "llm_summary": {"type": "string"},
-                            },
-                            "required": [
-                                "signal_type",
-                                "sentiment",
-                                "relevance",
-                                "triggers_alert_candidate",
-                                "classification_reason",
-                                "llm_summary",
-                            ],
-                        },
-                    },
-                },
-            )
-            return json.loads(response.choices[0].message.content)
+            response = model.generate_content(classification_prompt(item))
+            text = response.text.strip()
+
+            # Markdown-Backticks entfernen falls vorhanden
+            if text.startswith("```"):
+                text = text.split("```")[1]
+                if text.startswith("json"):
+                    text = text[4:]
+            text = text.strip()
+
+            return json.loads(text)
 
         except Exception as e:
             wait = 2 ** attempt
