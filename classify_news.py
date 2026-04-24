@@ -2,11 +2,13 @@ import os
 import json
 import time
 
-import google.generativeai as genai
+from openai import OpenAI
 from supabase import create_client
 
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-model = genai.GenerativeModel("gemini-1.5-flash")
+client = OpenAI(
+    api_key=os.environ["GROQ_API_KEY"],
+    base_url="https://api.groq.com/openai/v1",
+)
 
 supabase = create_client(
     os.environ["SUPABASE_URL"],
@@ -15,66 +17,41 @@ supabase = create_client(
 
 TARGET_DATE = os.environ.get("INGEST_DATE")
 
-def classification_prompt(item: dict) -> str:
-    return f"""Du klassifizierst externe Unternehmensmeldungen für ein Frühwarnsystem für Kreditanalysten.
-Gib NUR ein JSON-Objekt zurück, keine Erklärungen, keine Markdown-Backticks.
+def classification_messages(item):
+    system_msg = {
+        "role": "system",
+        "content": "Du klassifizierst externe Unternehmensmeldungen fuer ein Fruehwarnsystem fuer Kreditanalysten. Gib nur JSON zurueck."
+    }
+    user_content = "Kunde-ID: " + str(item["customer_id"]) + "\n"
+    user_content += "Quelle: " + str(item["source_name"]) + "\n"
+    user_content += "Titel: " + str(item["headline"]) + "\n"
+    user_content += "Kurztext: " + str(item["summary"]) + "\n"
+    user_content += "Volltext: " + str(item["raw_text"]) + "\n\n"
+    user_content += "Gib JSON zurueck mit: signal_type (negative_press|management_change|profit_warning|price_related_news|other), "
+    user_content += "sentiment (negative|neutral|positive), relevance (high|medium|low), "
+    user_content += "triggers_alert_candidate (true|false), classification_reason (string), llm_summary (string)"
+    user_msg = {"role": "user", "content": user_content}
+    return [system_msg, user_msg]
 
-Regeln:
-- "profit_warning" bei Gewinnwarnung, Guidance-Senkung oder finanzieller Verschlechterung
-- "management_change" bei relevantem Wechsel im Top-Management
-- "negative_press" bei negativer Berichterstattung mit möglicher Kreditrelevanz
-- "price_related_news" nur wenn die Nachricht direkt kursbezogen ist
-- sonst "other"
-
-Relevanz:
-- high: direkt kreditrelevant oder deutliche finanzielle Verschlechterung
-- medium: relevant, aber nicht unmittelbar kritisch
-- low: dokumentationswürdig, aber kein Warnsignal
-
-Meldung:
-Kunde-ID: {item["customer_id"]}
-Quelle: {item["source_name"]}
-Titel: {item["headline"]}
-Kurztext: {item["summary"]}
-Volltext: {item["raw_text"]}
-
-Antworte ausschließlich mit diesem JSON-Schema:
-{{
-  "signal_type": "negative_press|management_change|profit_warning|price_related_news|other",
-  "sentiment": "negative|neutral|positive",
-  "relevance": "high|medium|low",
-  "triggers_alert_candidate": true|false,
-  "classification_reason": "kurze Begründung",
-  "llm_summary": "Kurzzusammenfassung der Meldung"
-}}"""
-
-
-def classify_item(item: dict, retries: int = 3) -> dict:
+def classify_item(item, retries=3):
     for attempt in range(retries):
         try:
-            response = model.generate_content(classification_prompt(item))
-            text = response.text.strip()
-
-            # Markdown-Backticks entfernen falls vorhanden
-            if text.startswith("```"):
-                text = text.split("```")[1]
-                if text.startswith("json"):
-                    text = text[4:]
-            text = text.strip()
-
-            return json.loads(text)
-
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=classification_messages(item),
+                response_format={"type": "json_object"},
+            )
+            return json.loads(response.choices[0].message.content)
         except Exception as e:
             wait = 2 ** attempt
-            print(f"  Versuch {attempt + 1}/{retries} fehlgeschlagen: {e}")
+            print("  Versuch " + str(attempt + 1) + "/" + str(retries) + " fehlgeschlagen: " + str(e))
             if attempt < retries - 1:
-                print(f"  Warte {wait}s ...")
+                print("  Warte " + str(wait) + "s ...")
                 time.sleep(wait)
             else:
                 raise
 
-
-def already_exists(source_external_id: str, customer_id: int) -> bool:
+def already_exists(source_external_id, customer_id):
     resp = (
         supabase.table("news_events")
         .select("id")
@@ -85,8 +62,7 @@ def already_exists(source_external_id: str, customer_id: int) -> bool:
     )
     return len(resp.data or []) > 0
 
-
-def save_item(item: dict, cls: dict):
+def save_item(item, cls):
     row = {
         "customer_id":              item["customer_id"],
         "source_name":              item["source_name"],
@@ -105,7 +81,7 @@ def save_item(item: dict, cls: dict):
         "relevance":                cls["relevance"],
         "relevance_score":          None,
         "is_duplicate":             False,
-        "dedupe_key":               f'{item["customer_id"]}_{item["source_external_id"]}',
+        "dedupe_key":               str(item["customer_id"]) + "_" + str(item["source_external_id"]),
         "triggers_alert_candidate": cls["triggers_alert_candidate"],
         "classification_reason":    cls["classification_reason"],
         "llm_summary":              cls["llm_summary"],

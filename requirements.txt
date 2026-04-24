@@ -3,4 +3,3 @@ openai
 yfinance
 newsapi-python
 feedparser
-google-generativeai
