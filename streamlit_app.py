@@ -13,7 +13,6 @@ def priority_order(value):
 
 def style_priority(val):
     val = str(val).lower()
-
     if val == "high":
         return "background-color: #FDECEC; color: #A61B1B; font-weight: 700;"
     elif val == "medium":
@@ -22,6 +21,16 @@ def style_priority(val):
         return "background-color: #EAF4FF; color: #1D4F91; font-weight: 700;"
     elif val == "none":
         return "background-color: #F3F4F6; color: #4B5563; font-weight: 600;"
+    return ""
+
+def style_status(val):
+    val = str(val).lower()
+    if val == "open":
+        return "background-color: #FFF4E5; color: #9A5B00; font-weight: 700;"
+    elif val == "closed":
+        return "background-color: #ECFDF5; color: #065F46; font-weight: 700;"
+    elif val == "in_review":
+        return "background-color: #EAF4FF; color: #1D4F91; font-weight: 700;"
     return ""
 
 def detail_box(label, value, bg="#F8FAFC", border="#E5E7EB"):
@@ -70,7 +79,7 @@ st.markdown(
 )
 
 st.title("Credit Early Warning Dashboard")
-st.subheader("Frühwarnsystem für Kreditanalysten")
+st.subheader("Fruehwarnsystem fuer Kreditanalysten")
 
 supabase = create_client(
     st.secrets["SUPABASE_URL"],
@@ -92,12 +101,12 @@ alerts_response = (
     .execute()
 )
 
-prices_response = ( 
-    supabase.table("price_snapshots") 
-    .select( 
-        "id, customer_id, trading_date, close_price, prev_close_price, pct_change, " 
-        "price_alert_level" 
-    ) 
+prices_response = (
+    supabase.table("price_snapshots")
+    .select(
+        "id, customer_id, trading_date, close_price, prev_close_price, pct_change, "
+        "price_alert_level"
+    )
     .execute()
 )
 
@@ -124,19 +133,16 @@ alert_count = len(alerts) if not alerts.empty else 0
 high_alert_count = len(alerts[alerts["alert_priority"] == "high"]) if not alerts.empty else 0
 price_move_count = len(prices[prices["pct_change"].abs() >= 3]) if not prices.empty else 0
 
-st.subheader("Überblick")
+st.subheader("Ueberblick")
 
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.metric("Kunden im Portfolio", customer_count)
-
 with col2:
     st.metric("Offene Alerts", alert_count)
-
 with col3:
     st.metric("High Alerts", high_alert_count)
-
 with col4:
     st.metric("Kursbewegung > 3%", price_move_count)
 
@@ -145,7 +151,7 @@ st.divider()
 sector_options = ["Alle"] + sorted(customers["sector"].dropna().unique().tolist())
 selected_sector = st.selectbox("Branche filtern", sector_options)
 
-st.divider() 
+st.divider()
 
 left_col, right_col = st.columns([2, 1])
 
@@ -171,13 +177,13 @@ with left_col:
             st.markdown(f"**Stand Alerts:** {alert_dates[0]}")
         elif len(alert_dates) > 1:
             st.markdown(f"**Stand Alerts:** {', '.join(alert_dates)}")
-        
+
         alerts_view["priority_rank"] = alerts_view["alert_priority"].apply(priority_order)
         alerts_view = alerts_view.sort_values(
             by=["priority_rank", "customer_name"],
             ascending=[True, True]
         )
-      
+
         st.metric("Anzahl Alerts", len(alerts_view))
 
         alerts_table = alerts_view[
@@ -194,19 +200,20 @@ with left_col:
             columns={
                 "customer_name": "Kunde",
                 "sector": "Branche",
-                "alert_priority": "Priorität",
+                "alert_priority": "Prioritaet",
                 "alert_type": "Alert-Typ",
                 "max_abs_price_change_pct": "Max. Kursbewegung %",
                 "alert_status": "Status",
-                "alert_reason": "Begründung",
+                "alert_reason": "Begruendung",
             }
         )
 
         styled_alerts = (
             alerts_table.style
-            .map(style_priority, subset=["Priorität"])
+            .map(style_priority, subset=["Prioritaet"])
+            .map(style_status, subset=["Status"])
             .format({"Max. Kursbewegung %": "{:.2f}"})
-        ) 
+        )
 
         st.dataframe(
             styled_alerts,
@@ -223,7 +230,7 @@ with right_col:
         filtered_customers = customers.copy()
 
     customer_options = filtered_customers["customer_name"].sort_values().tolist()
-    selected_customer = st.selectbox("Kunde auswählen", customer_options)
+    selected_customer = st.selectbox("Kunde auswaehlen", customer_options)
 
     selected_row = filtered_customers[
         filtered_customers["customer_name"] == selected_customer
@@ -248,18 +255,20 @@ with right_col:
         else pd.DataFrame()
     )
 
-    st.markdown("#### Überblick")
+    st.markdown("#### Ueberblick")
 
     if not detail_alerts.empty:
         latest_alert = detail_alerts.sort_values("alert_date").iloc[-1]
         alert_priority_value = latest_alert["alert_priority"]
         alert_type_value = latest_alert["alert_type"]
         reason_value = latest_alert["alert_reason"]
+        alert_status_value = latest_alert["alert_status"]
     else:
         alert_priority_value = "none"
         alert_type_value = "kein Alert"
         reason_value = "Kein Alert vorhanden."
-    
+        alert_status_value = "n/a"
+
     if not detail_prices.empty:
         latest_price = detail_prices.sort_values("trading_date").iloc[-1]
         last_price_value = f"{latest_price['close_price']:.2f}"
@@ -267,10 +276,10 @@ with right_col:
     else:
         last_price_value = "n/a"
         pct_change_value = "n/a"
-    
+
     priority_bg = "#F3F4F6"
     priority_border = "#D1D5DB"
-    
+
     if str(alert_priority_value).lower() == "high":
         priority_bg = "#FDECEC"
         priority_border = "#F5C2C7"
@@ -280,35 +289,32 @@ with right_col:
     elif str(alert_priority_value).lower() == "low":
         priority_bg = "#EAF4FF"
         priority_border = "#B9D6F2"
-    
+
     top1, top2, top3 = st.columns([1.4, 1.2, 0.8])
-    
+
     with top1:
         st.markdown(detail_box("Kunde", selected_row["customer_name"]), unsafe_allow_html=True)
-    
     with top2:
         st.markdown(detail_box("Branche", selected_row["sector"]), unsafe_allow_html=True)
-    
     with top3:
         st.markdown(detail_box("Ticker", selected_row["ticker"]), unsafe_allow_html=True)
-    
-    mid1, mid2, mid3, mid4 = st.columns(4)
-    
+
+    mid1, mid2, mid3, mid4, mid5 = st.columns(5)
+
     with mid1:
         st.markdown(
-            detail_box("Alert-Priorität", alert_priority_value, bg=priority_bg, border=priority_border),
+            detail_box("Alert-Prioritaet", alert_priority_value, bg=priority_bg, border=priority_border),
             unsafe_allow_html=True
         )
-    
     with mid2:
         st.markdown(detail_box("Alert-Typ", alert_type_value), unsafe_allow_html=True)
-    
     with mid3:
-        st.markdown(detail_box("Letzter Kurs", last_price_value), unsafe_allow_html=True)
-    
+        st.markdown(detail_box("Alert-Status", alert_status_value), unsafe_allow_html=True)
     with mid4:
-        st.markdown(detail_box("Veränderung zum Vortag", pct_change_value), unsafe_allow_html=True)
-    
+        st.markdown(detail_box("Letzter Kurs", last_price_value), unsafe_allow_html=True)
+    with mid5:
+        st.markdown(detail_box("Veraenderung Vortag", pct_change_value), unsafe_allow_html=True)
+
     st.markdown(
         f"""
         <div style="
@@ -323,7 +329,7 @@ with right_col:
                 font-size: 0.8rem;
                 color: #6B7280;
                 margin-bottom: 6px;
-            ">Begründung</div>
+            ">Begruendung</div>
             <div style="
                 font-size: 0.96rem;
                 color: #111827;
@@ -332,7 +338,7 @@ with right_col:
         </div>
         """,
         unsafe_allow_html=True
-    ) 
+    )
 
     st.markdown("#### Neueste Meldungen")
 
@@ -351,7 +357,7 @@ with right_col:
             columns={
                 "published_at": "Zeitpunkt",
                 "source_name": "Quelle",
-                "headline": "Überschrift",
+                "headline": "Ueberschrift",
                 "signal_type": "Signalart",
                 "relevance": "Relevanz",
             }
@@ -364,49 +370,44 @@ with right_col:
                 st.caption(f"{row['source_name']}: {row['llm_summary']}")
     else:
         st.write("Keine Meldungen vorhanden.")
-        
-st.subheader("Portfolioübersicht") 
 
-portfolio_view = customers.copy() 
+st.subheader("Portfoliouebersicht")
 
-if not prices.empty: 
-    latest_prices = prices.sort_values("trading_date").drop_duplicates( 
-        subset=["customer_id"], 
-        keep="last" 
-    ) 
-    
-    portfolio_view = portfolio_view.merge( 
-        latest_prices[["customer_id", "close_price", "pct_change"]], 
-        left_on="id", 
-        right_on="customer_id", 
-        how="left" 
-    ) 
-    
-if not alerts.empty: 
-    latest_alerts = alerts.sort_values("alert_date").drop_duplicates( 
-        subset=["customer_id"], 
-        keep="last" 
-    ) 
-    
-    portfolio_view = portfolio_view.merge( 
-        latest_alerts[["customer_id", "alert_priority"]], 
-        left_on="id", 
-        right_on="customer_id", 
-        how="left" 
-    ) 
-    
-    portfolio_view["alert_priority"] = portfolio_view["alert_priority"].fillna("none") 
+portfolio_view = customers.copy()
+
+if not prices.empty:
+    latest_prices = prices.sort_values("trading_date").drop_duplicates(
+        subset=["customer_id"],
+        keep="last"
+    )
+    portfolio_view = portfolio_view.merge(
+        latest_prices[["customer_id", "close_price", "pct_change"]],
+        left_on="id",
+        right_on="customer_id",
+        how="left"
+    )
+
+if not alerts.empty:
+    latest_alerts = alerts.sort_values("alert_date").drop_duplicates(
+        subset=["customer_id"],
+        keep="last"
+    )
+    portfolio_view = portfolio_view.merge(
+        latest_alerts[["customer_id", "alert_priority", "alert_status"]],
+        left_on="id",
+        right_on="customer_id",
+        how="left"
+    )
+    portfolio_view["alert_priority"] = portfolio_view["alert_priority"].fillna("none")
+    portfolio_view["alert_status"] = portfolio_view["alert_status"].fillna("n/a")
 
     sector_view = portfolio_view.copy()
-
     sector_view["has_alert"] = sector_view["alert_priority"].apply(
         lambda x: 0 if x == "none" else 1
     )
-
     sector_view["has_high_alert"] = sector_view["alert_priority"].apply(
         lambda x: 1 if x == "high" else 0
     )
-
     sector_overview = (
         sector_view.groupby("sector", dropna=False)
         .agg(
@@ -418,8 +419,7 @@ if not alerts.empty:
         .reset_index()
     )
 
-    st.markdown("Branchenüberblick")
-
+    st.markdown("Branchenuebersicht")
     st.dataframe(
         sector_overview.rename(
             columns={
@@ -427,15 +427,15 @@ if not alerts.empty:
                 "kunden_anzahl": "Anzahl Kunden",
                 "alerts_anzahl": "Anzahl Alerts",
                 "high_alerts": "High Alerts",
-                  "durchschnitt_kursveraenderung": "Ø Kursveränderung %",
+                "durchschnitt_kursveraenderung": "Durchschn. Kursveraenderung %",
             }
         ),
         use_container_width=True,
         hide_index=True,
     )
 
-    st.markdown("Kundenübersicht")
-    
+    st.markdown("Kundenuebersicht")
+
     portfolio_table = portfolio_view[
         [
             "customer_name",
@@ -445,8 +445,8 @@ if not alerts.empty:
             "close_price",
             "pct_change",
             "alert_priority",
+            "alert_status",
         ]
-
     ].rename(
         columns={
             "customer_name": "Kunde",
@@ -454,18 +454,20 @@ if not alerts.empty:
             "ticker": "Ticker",
             "track_price": "Kurse tracken",
             "close_price": "Letzter Kurs",
-            "pct_change": "Veränderung zum Vortag %",
-            "alert_priority": "Heutiger Alert",
+            "pct_change": "Veraenderung Vortag %",
+            "alert_priority": "Alert-Prioritaet",
+            "alert_status": "Alert-Status",
         }
     )
 
     styled_portfolio = (
         portfolio_table.style
-        .map(style_priority, subset=["Heutiger Alert"])
+        .map(style_priority, subset=["Alert-Prioritaet"])
+        .map(style_status, subset=["Alert-Status"])
         .format({
             "Letzter Kurs": "{:.2f}",
-            "Veränderung zum Vortag %": "{:.2f}",
-            })
+            "Veraenderung Vortag %": "{:.2f}",
+        })
     )
 
     st.dataframe(
@@ -473,9 +475,3 @@ if not alerts.empty:
         use_container_width=True,
         hide_index=True,
     )
-
-
-
-
-
-    
