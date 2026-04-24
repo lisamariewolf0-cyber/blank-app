@@ -113,7 +113,7 @@ prices_response = (
 news_response = (
     supabase.table("news_events")
     .select(
-        "id, customer_id, ingestion_date, published_at, source_name, headline, "
+        "id, customer_id, ingestion_date, published_at, source_name, source_url, headline, "
         "signal_type, sentiment, relevance, llm_summary"
     )
     .execute()
@@ -340,29 +340,40 @@ with right_col:
     if not detail_news.empty:
         detail_news = detail_news.sort_values("published_at", ascending=False).head(3)
 
-        news_table = detail_news[
-            [
-                "published_at",
-                "source_name",
-                "headline",
-                "signal_type",
-                "relevance",
-            ]
-        ].rename(
-            columns={
-                "published_at": "Zeitpunkt",
-                "source_name": "Quelle",
-                "headline": "Überschrift",
-                "signal_type": "Signalart",
-                "relevance": "Relevanz",
-            }
-        )
-
-        st.dataframe(news_table, use_container_width=True, hide_index=True)
-
         for _, row in detail_news.iterrows():
-            if pd.notnull(row.get("llm_summary")) and str(row["llm_summary"]).strip():
-                st.caption(f"{row['source_name']}: {row['llm_summary']}")
+            zeitpunkt = str(row["published_at"])[:10]
+            quelle    = row.get("source_name", "")
+            headline  = row.get("headline", "")
+            signal    = row.get("signal_type", "")
+            relevanz  = row.get("relevance", "")
+            url       = row.get("source_url", "")
+            summary   = row.get("llm_summary", "")
+
+            if url:
+                titel_html = f'<a href="{url}" target="_blank" style="color:#1D4F91;font-weight:600;text-decoration:none;">{headline}</a>'
+            else:
+                titel_html = f'<span style="font-weight:600;">{headline}</span>'
+
+            st.markdown(
+                f"""
+                <div style="
+                    background: #F8FAFC;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 8px;
+                    padding: 10px 14px;
+                    margin-bottom: 8px;
+                ">
+                    <div style="font-size:0.78rem;color:#6B7280;margin-bottom:4px;">
+                        {zeitpunkt} · {quelle} · {signal} · {relevanz}
+                    </div>
+                    <div style="font-size:0.95rem;line-height:1.4;">
+                        {titel_html}
+                    </div>
+                    {f'<div style="font-size:0.82rem;color:#6B7280;margin-top:5px;">{summary}</div>' if pd.notnull(summary) and str(summary).strip() else ""}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
     else:
         st.write("Keine Meldungen vorhanden.")
 
